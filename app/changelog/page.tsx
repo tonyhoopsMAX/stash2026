@@ -1,0 +1,4 @@
+import type { Metadata } from 'next';
+import { PublicPage } from '@/components/stash/PublicPage';
+export const metadata: Metadata = { title: 'Changelog' };
+export default function ChangelogPage(){return <PublicPage eyebrow="CHANGELOG" title="What’s new in STASH." intro="A transparent record of product changes, starting with the local-first release candidate."><div className="release-block"><span>1.0.0 · September 3, 2026</span><h2>Release candidate</h2><ul><li>Fast capture for screenshots, photos, links, notes, and files</li><li>Local IndexedDB persistence with portable backup import and export</li><li>Collections, tags, pinning, favorites, archive, trash, and restore</li><li>Offline search and deterministic resurfacing</li><li>Reminders, dynamic themes, install guidance, and PWA support</li><li>Responsive Fluid Material interface for phone and desktop</li></ul></div></PublicPage>}

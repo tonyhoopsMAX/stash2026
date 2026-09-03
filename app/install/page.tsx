@@ -1,0 +1,5 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { PublicPage } from '@/components/stash/PublicPage';
+export const metadata: Metadata = { title: 'Install' };
+export default function InstallPage(){return <PublicPage eyebrow="INSTALL" title="Keep STASH one tap away." intro="Install the PWA for a focused, full-screen experience with an offline-ready app shell."><h2>iPhone and iPad</h2><ol><li>Open STASH in Safari.</li><li>Tap the Share button.</li><li>Choose Add to Home Screen, then Add.</li></ol><h2>Android</h2><ol><li>Open STASH in Chrome.</li><li>Open the browser menu.</li><li>Choose Install app and confirm.</li></ol><h2>Desktop</h2><ol><li>Open STASH in a supported Chromium browser.</li><li>Choose the install icon in the address bar or browser menu.</li><li>Confirm Install.</li></ol><div className="callout"><strong>After installation</strong><p>Open STASH once while connected so the app shell can be cached, then use the core experience offline.</p></div><Link href="/app" className="primary-button focus-ring mt-8">Open STASH</Link></PublicPage>}
