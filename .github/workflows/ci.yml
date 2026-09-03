@@ -52,8 +52,12 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
-      - name: Install Playwright Chromium + Linux dependencies
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright browsers + Linux dependencies
+        # The iPhone PWA polish test suite adds iPhone 14 and iPhone 16
+        # Pro Max projects (which use Playwright's WebKit, not Chromium).
+        # Install all browsers we use so the E2E step has the right
+        # engine on hand.
+        run: pnpm exec playwright install --with-deps chromium webkit
 
       # E2E runs against the pre-built production bundle. The Playwright
       # webServer runs `pnpm build:web && pnpm start`, so this step builds the
