@@ -55,7 +55,12 @@ jobs:
       - name: Install Playwright Chromium + Linux dependencies
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Playwright E2E tests
+      # E2E runs against the pre-built production bundle. The Playwright
+      # webServer runs `pnpm build:web && pnpm start`, so this step builds the
+      # production app (all routes prerendered) and serves it on :3000. That is
+      # deterministic: the heavy /app client bundle is already bundled, so there
+      # is no lazy on-demand transform to race the assertions on a cold runner.
+      - name: Playwright E2E tests (production bundle)
         run: pnpm test:e2e
 
       - name: Upload Playwright report (success or failure)
@@ -70,6 +75,3 @@ jobs:
       - name: Surface E2E failure details as annotations
         if: failure()
         run: node scripts/e2e-summary.mjs
-
-      - name: Production / PWA build
-        run: pnpm build:web

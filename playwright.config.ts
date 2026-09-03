@@ -2,12 +2,14 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  // The /app route pulls in a heavy client bundle (motion, recharts, lucide)
-  // that the Vite dev server transforms on first request. On a cold CI runner
-  // that first transform + hydration can exceed a narrow timeout, so give each
-  // test a generous wall-clock budget and wait for the app to actually become
-  // ready rather than racing it. This is test-harness robustness, not a way of
-  // hiding real failures: a genuinely broken page will still time out.
+  // We exercise the PRE-BUILT production bundle (`vinext build --prerender-all`
+  // then `vinext start`), not the dev server. The /app route pulls a heavy
+  // client bundle (motion, recharts, lucide); in dev that is transformed
+  // lazily per request, and on a cold CI runner that on-demand transform +
+  // hydration intermittently exceeded a narrow timeout, leaving the app on its
+  // splash screen. Running against the production bundle (which is fully
+  // pre-bundled and prerendered) removes that cold-start race deterministically
+  // while still exercising the real rendered app.
   timeout: 90_000,
   fullyParallel: false,
   workers: 1,
@@ -22,10 +24,10 @@ export default defineConfig({
     navigationTimeout: 60_000,
   },
   webServer: {
-    command: 'pnpm dev',
+    command: 'pnpm build:web && pnpm start',
     url: 'http://localhost:3000/app',
-    reuseExistingServer: true,
-    timeout: 240_000,
+    reuseExistingServer: false,
+    timeout: 300_000,
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
