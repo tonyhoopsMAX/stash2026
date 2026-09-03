@@ -57,6 +57,7 @@ export default defineConfig(async () => {
         injectRegister: 'auto',
         includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png'],
         manifest: {
+          id: '/',
           name: 'STASH — Save now. Find it when it matters.',
           short_name: 'STASH',
           description: 'A private, local-first place for screenshots, links, notes, files, and ideas.',
@@ -64,13 +65,42 @@ export default defineConfig(async () => {
           scope: '/',
           display: 'standalone',
           orientation: 'any',
+          dir: 'ltr',
+          lang: 'en-US',
           background_color: '#061112',
           theme_color: '#061112',
           categories: ['productivity', 'utilities'],
           icons: [
-            { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
+            { src: '/apple-touch-icon-180x180.png', sizes: '180x180', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
             { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+          screenshots: [
+            {
+              src: '/screenshot-desktop.png',
+              sizes: '1280x720',
+              type: 'image/png',
+              form_factor: 'wide',
+              label: 'STASH Desktop App',
+            },
+            {
+              src: '/screenshot-mobile.png',
+              sizes: '750x1334',
+              type: 'image/png',
+              form_factor: 'narrow',
+              label: 'STASH Mobile App',
+            },
+          ],
+          shortcuts: [
+            {
+              name: 'Open STASH',
+              short_name: 'STASH',
+              description: 'Open your local items',
+              url: '/app',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+            },
           ],
         },
         workbox: {
