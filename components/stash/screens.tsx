@@ -76,8 +76,8 @@ export function PageHeader({
           </button>
         )}
         <div className="min-w-0 flex-1">
-          {eyebrow && <p className="eyebrow tracking-[0.25em] text-xs font-bold text-[var(--stash-accent)]">{eyebrow}</p>}
-          <h1 className="truncate text-3xl sm:text-4xl font-bold tracking-tight text-foreground">{title}</h1>
+          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+          <h1 className="page-header-title text-foreground">{title}</h1>
         </div>
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -163,8 +163,8 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
   return (
     <div className="screen-stack space-y-6">
       <div>
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">{greeting}</h1>
-        <p className="page-subtitle text-base sm:text-lg text-muted-foreground mt-1">Your space for what matters.</p>
+        <h1 className="home-greeting text-foreground">{greeting}</h1>
+        <p className="page-subtitle">Your space for what matters.</p>
       </div>
 
       {/* Quick Capture Card (Stash 3) */}
@@ -482,7 +482,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
   return (
     <div className="screen-stack space-y-5">
       <PageHeader eyebrow="STASH" title={listCopy[mode].title} />
-      <p className="page-subtitle text-muted-foreground mt-[-0.5rem]">{listCopy[mode].subtitle}</p>
+      <p className="page-subtitle">{listCopy[mode].subtitle}</p>
 
       {/* Search Input Bar (Stash 1 & Stash 4) */}
       {(mode === 'search' || mode === 'inbox') && (
@@ -782,7 +782,7 @@ export function CollectionsScreen() {
   return (
     <div className="screen-stack space-y-5">
       <PageHeader eyebrow="ORGANIZE" title="Collections" />
-      <p className="page-subtitle text-muted-foreground mt-[-0.5rem]">Loose enough for capture. Structured when it helps.</p>
+      <p className="page-subtitle">Loose enough for capture. Structured when it helps.</p>
 
       <form className="new-collection flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] p-2" onSubmit={submit}>
         <FolderPlus size={18} className="ml-2 text-[var(--stash-accent)] shrink-0" />
@@ -847,7 +847,7 @@ export function CollectionScreen({ id }: { id?: string }) {
   return (
     <div className="screen-stack space-y-4">
       <PageHeader back={() => navigate('collections')} eyebrow="COLLECTION" title={collection.name} />
-      <p className="page-subtitle text-muted-foreground mt-[-0.5rem]">{visible.length} saved items</p>
+      <p className="page-subtitle">{visible.length} saved items</p>
 
       {visible.length ? (
         <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] divide-y divide-white/5 overflow-hidden">
@@ -1466,7 +1466,7 @@ export function SettingsScreen() {
   return (
     <div className="screen-stack space-y-6">
       <PageHeader eyebrow="STASH" title="Settings" />
-      <p className="page-subtitle text-muted-foreground mt-[-0.5rem]">Customize your experience.</p>
+      <p className="page-subtitle">Customize your experience.</p>
 
       {/* Local-First / Privacy Hero Banner (Stash 6) */}
       <Surface className="rounded-[2rem] border border-white/15 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-xl overflow-hidden relative">
@@ -1911,7 +1911,7 @@ export function InstallScreen() {
   return (
     <div className="screen-stack space-y-5">
       <PageHeader back={() => navigate('settings')} eyebrow="PWA" title="Install STASH" />
-      <p className="page-subtitle text-muted-foreground mt-[-0.5rem]">A faster, full-screen home for everything you save.</p>
+      <p className="page-subtitle">A faster, full-screen home for everything you save.</p>
 
       <Surface className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 backdrop-blur-2xl">
         <div className="flex items-center gap-4">
