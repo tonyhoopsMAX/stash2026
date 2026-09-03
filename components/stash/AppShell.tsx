@@ -47,6 +47,9 @@ import { cn } from './ui';
 import { applyStatusBar, registerBackHandler } from '@/lib/stash/platform';
 import { useStashStore } from '@/lib/stash/store';
 import type { AppView, StashItemType } from '@/lib/stash/types';
+import { useKeyboardOpen, useVisualViewport } from '@/hooks/use-visual-viewport';
+import { useStandalone } from '@/hooks/use-standalone';
+import { markPersistRequested, requestPersist, wasPersistRequested } from '@/lib/stash/persistence';
 
 declare global {
   interface Document {
@@ -112,6 +115,68 @@ export function AppShell() {
   const [pulseActive, setPulseActive] = useState(false);
   const [deferredInstall, setDeferredInstall] = useState<{ prompt: () => Promise<void> }>();
 
+  // iOS PWA: detect standalone / native so we can hide the install modal
+  // and let CSS apply the standalone-specific layout tweaks.
+  const appMode = useStandalone();
+  // iOS PWA: hide the bottom-nav + FAB when the soft keyboard is open so
+  // the user can see and use the focused input.
+  const keyboardOpen = useKeyboardOpen();
+  const { height: visualHeight } = useVisualViewport();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    // Map hook state to data attributes consumed by globals.css.
+    root.setAttribute('data-keyboard-open', keyboardOpen ? 'true' : 'false');
+  }, [keyboardOpen]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-app-mode', appMode);
+  }, [appMode]);
+
+  // iOS PWA: on landscape phones the visual viewport sits inside the
+  // safe-area top inset. The splash background needs to extend under the
+  // status bar; we just expose the visualHeight so the splash can opt
+  // into a `min-height: ${visualHeight}px` if it wants to.
+  void visualHeight;
+
+  // iOS PWA: keep the focused input above the keyboard by scrolling it
+  // into view. iOS Safari's "ScrollToFocusedInput" heuristic is
+  // aggressive but inconsistent; doing it ourselves is more reliable.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onFocusIn = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.matches('input, textarea, select')) {
+        // Defer to let the keyboard open and the visual viewport resize.
+        window.setTimeout(() => {
+          try {
+            target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          } catch {
+            target.scrollIntoView();
+          }
+        }, 200);
+      }
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
+
+  // iOS PWA: ask for persistent storage on the first real save. iOS
+  // Safari typically auto-grants; Chromium requires user activation, so
+  // we tie this to a user-initiated save path.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onFirstSave = () => {
+      if (wasPersistRequested()) return;
+      markPersistRequested();
+      void requestPersist();
+    };
+    window.addEventListener('stash-first-save', onFirstSave);
+    return () => window.removeEventListener('stash-first-save', onFirstSave);
+  }, []);
+
   useEffect(() => {
     void load();
     const params = new URLSearchParams(window.location.search);
@@ -162,6 +227,9 @@ export function AppShell() {
       setDeferredInstall(event as Event & { prompt: () => Promise<void> });
     };
     const requestInstall = () => {
+      // iOS PWA: never show the in-app install modal in standalone or
+      // native mode — the app is already installed.
+      if (appMode !== 'browser') return;
       if (deferredInstall) {
         void deferredInstall.prompt();
       } else {
@@ -175,7 +243,7 @@ export function AppShell() {
       window.removeEventListener('beforeinstallprompt', beforeInstall);
       window.removeEventListener('stash-install-request', requestInstall);
     };
-  }, [deferredInstall]);
+  }, [deferredInstall, appMode]);
 
   useEffect(() => {
     const context = document.modelContext;
@@ -409,27 +477,28 @@ export function AppShell() {
               </span>
             )}
 
-            {/* Waveform Resurface Pulse */}
+            {/* Waveform Resurface Pulse — h-11/w-11 = 44px (Apple HIG
+             *  44pt minimum touch target). */}
             <button
               onClick={handleWaveformClick}
               className={cn(
-                'icon-button focus-ring relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all',
+                'icon-button focus-ring relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all',
                 pulseActive && 'border-[var(--stash-accent)] text-[var(--stash-accent)] animate-pulse'
               )}
               aria-label="Resurface pulse"
               title="Resurface pulse"
             >
-              <Activity size={17} />
+              <Activity size={18} />
             </button>
 
-            {/* Notification Bell with Badge */}
+            {/* Notification Bell with Badge — 44pt touch target. */}
             <button
               onClick={() => setRemindersDrawerOpen(true)}
-              className="icon-button focus-ring relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
+              className="icon-button focus-ring relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
               aria-label="Notifications"
               title="Notifications"
             >
-              <Bell size={17} />
+              <Bell size={18} />
               {dueReminders.length > 0 && (
                 <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[var(--stash-accent)] shadow-[0_0_8px_var(--stash-accent)]" />
               )}
@@ -595,42 +664,48 @@ export function AppShell() {
         )}
       </AnimatePresence>
 
-      {/* In-App Install Guide Modal (replaces window.alert) */}
-      <Dialog open={installModalOpen} onOpenChange={setInstallModalOpen}>
-        <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Laptop size={20} className="text-[var(--stash-accent)]" />
-              Install STASH
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Add STASH to your device for full-screen offline access.
-            </DialogDescription>
-          </DialogHeader>
+      {/* In-App Install Guide Modal (replaces window.alert) — only
+       *  shown in browser mode; standalone/native users get nothing. */}
+      {appMode === 'browser' && (
+        <Dialog open={installModalOpen} onOpenChange={setInstallModalOpen}>
+          <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Laptop size={20} className="text-[var(--stash-accent)]" />
+                Install STASH
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Add STASH to your device for full-screen offline access.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-3 py-2 text-sm text-muted-foreground">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <strong className="text-foreground block text-xs font-semibold mb-1">iOS / Safari</strong>
-              <p className="text-xs">Tap the Share icon at the bottom of Safari, then choose <strong>“Add to Home Screen”</strong>.</p>
+            <div className="space-y-3 py-2 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <strong className="text-foreground block text-xs font-semibold mb-1">iPhone & iPad (Safari)</strong>
+                <p className="text-xs">Tap the <strong>Share</strong> button in Safari, then choose <strong>“Add to Home Screen”</strong> and confirm. The app will appear on your home screen with the STASH icon and run in full-screen, offline mode.</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <strong className="text-foreground block text-xs font-semibold mb-1">Android (Chrome)</strong>
+                <p className="text-xs">Tap the three-dot menu, then select <strong>“Install app”</strong> or <strong>“Add to Home screen”</strong>.</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <strong className="text-foreground block text-xs font-semibold mb-1">Mac & Windows</strong>
+                <p className="text-xs">Click the install icon in your address bar to add STASH as a standalone application.</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                On iPhone, Add to Home Screen is only available in Safari. Other iOS browsers (Chrome, Firefox, Brave) can browse the site but cannot install the PWA.
+              </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <strong className="text-foreground block text-xs font-semibold mb-1">Android / Chrome</strong>
-              <p className="text-xs">Tap the three-dot menu in Chrome, then select <strong>“Install app”</strong> or <strong>“Add to Home screen”</strong>.</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <strong className="text-foreground block text-xs font-semibold mb-1">Mac & Windows</strong>
-              <p className="text-xs">Click the install icon in your address bar to add STASH as a standalone application.</p>
-            </div>
-          </div>
 
-          <button
-            onClick={() => setInstallModalOpen(false)}
-            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
-          >
-            Got it
-          </button>
-        </DialogContent>
-      </Dialog>
+            <button
+              onClick={() => setInstallModalOpen(false)}
+              className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
+            >
+              Got it
+            </button>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Reminders & Notifications Modal */}
       <Dialog open={remindersDrawerOpen} onOpenChange={setRemindersDrawerOpen}>

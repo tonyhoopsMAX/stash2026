@@ -1784,6 +1784,8 @@ export function BackupScreen() {
   const [status, setStatus] = useState('');
   const [storage, setStorage] = useState<{ usage: number; quota: number } | null>(null);
   const [storageUnsupported, setStorageUnsupported] = useState(false);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [requestingPersist, setRequestingPersist] = useState(false);
 
   // Real browser storage estimation. Never hard-code a quota.
   useEffect(() => {
@@ -1792,19 +1794,56 @@ export function BackupScreen() {
       return;
     }
     let cancelled = false;
-    navigator.storage
-      .estimate()
-      .then((estimate) => {
-        if (cancelled) return;
-        setStorage({ usage: estimate.usage ?? 0, quota: estimate.quota ?? 0 });
-      })
-      .catch(() => {
-        if (!cancelled) setStorageUnsupported(true);
-      });
+    const refresh = () => {
+      navigator.storage
+        .estimate()
+        .then((estimate) => {
+          if (cancelled) return;
+          setStorage({ usage: estimate.usage ?? 0, quota: estimate.quota ?? 0 });
+        })
+        .catch(() => {
+          if (!cancelled) setStorageUnsupported(true);
+        });
+    };
+    refresh();
+    const onPersistGranted = () => refresh();
+    window.addEventListener('stash:persistence-granted', onPersistGranted);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('stash:persistence-granted', onPersistGranted);
+    };
+  }, []);
+
+  // iOS PWA: ask once whether the storage is marked persistent. If the
+  // browser supports the Storage API but the storage is not persistent,
+  // we show a banner with a "Request persistent storage" action.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.storage?.persisted) return;
+    let cancelled = false;
+    navigator.storage.persisted().then(
+      (p) => {
+        if (!cancelled) setPersisted(p);
+      },
+      () => {
+        // Storage API may reject in private modes; treat as unknown.
+      }
+    );
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const handleRequestPersist = async () => {
+    if (requestingPersist) return;
+    setRequestingPersist(true);
+    try {
+      const { requestPersist } = await import('@/lib/stash/persistence');
+      const granted = await requestPersist();
+      setPersisted(granted);
+    } finally {
+      setRequestingPersist(false);
+    }
+  };
 
   const onImport = async (file?: File) => {
     if (!file) return;
@@ -1823,10 +1862,34 @@ export function BackupScreen() {
   };
 
   const usagePercent = storage && storage.quota > 0 ? Math.min(100, (storage.usage / storage.quota) * 100) : 0;
+  const showPersistBanner = persisted === false && !storageUnsupported;
 
   return (
     <div className="screen-stack space-y-5">
       <PageHeader back={() => navigate('settings')} eyebrow="SETTINGS" title="Storage & Backup" />
+
+      {/* iOS PWA: persistent-storage banner. Only renders when the
+       *  browser supports the Storage API but the storage is not
+       *  marked persistent. iOS Safari will usually auto-grant; the
+       *  button is provided as a backup. */}
+      {showPersistBanner && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3 text-amber-100">
+          <ShieldCheck size={20} className="text-amber-300 shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <strong className="block text-sm font-semibold">Protect your data on this device</strong>
+            <p className="text-xs text-amber-100/80 mt-1 leading-relaxed">
+              Some browsers may evict website data under storage pressure. Asking once for persistent storage prevents that.
+            </p>
+            <button
+              onClick={handleRequestPersist}
+              disabled={requestingPersist}
+              className="mt-2 rounded-full bg-amber-500 px-4 py-1.5 text-xs font-semibold text-amber-950 disabled:opacity-50 focus-ring"
+            >
+              {requestingPersist ? 'Requesting…' : 'Request persistent storage'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Storage Gauge Card */}
       <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -1835,6 +1898,12 @@ export function BackupScreen() {
             <strong className="text-base font-bold text-foreground">Storage Usage</strong>
             <p className="text-xs text-muted-foreground mt-0.5">
               {items.length} item{items.length === 1 ? '' : 's'} saved locally in IndexedDB
+              {persisted === true && (
+                <>
+                  {' · '}
+                  <span className="text-[var(--stash-accent)]">Persistent</span>
+                </>
+              )}
             </p>
           </div>
           {storage ? (

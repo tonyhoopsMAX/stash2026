@@ -4,6 +4,25 @@ import { create } from 'zustand';
 import { db, ensureSeeded, resetSampleData } from './db';
 import { defaultSettings } from './sample-data';
 import type { AppView, CreateItemInput, StashCollection, StashItem, StashItemType, StashSettings } from './types';
+import { markPersistRequested, requestPersist, wasPersistRequested } from './persistence';
+
+// Fire the first-save hint so AppShell (or any other consumer) can
+// request persistent storage once the user has done something real with
+// STASH. iOS Safari auto-grants in most cases; Chromium requires user
+// activation, which a save initiated by the user provides. We keep this
+// fire-and-forget so it never blocks the save path.
+function notifyFirstSave(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new Event('stash-first-save'));
+    if (!wasPersistRequested()) {
+      markPersistRequested();
+      void requestPersist();
+    }
+  } catch {
+    /* SSR / no window */
+  }
+}
 
 const uid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -183,6 +202,7 @@ export const useStashStore = create<StashState>((set, get) => ({
     };
     await db.items.put(item);
     set({ items: [item, ...get().items], view: 'detail', activeId: item.id, addOpen: false });
+    notifyFirstSave();
     return item;
   },
 

@@ -32,5 +32,10 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
+    // iPhone 14 (390x844) — the most common iPhone Safari viewport.
+    { name: 'iphone-14', use: { ...devices['iPhone 14'] } },
+    // iPhone 16 Pro Max (430x932) — the largest iPhone, useful to confirm
+    // the type scale / bottom-nav / safe-area all still work at the edge.
+    { name: 'iphone-16-pro-max', use: { ...devices['iPhone 16 Pro Max'] } },
   ],
 });
