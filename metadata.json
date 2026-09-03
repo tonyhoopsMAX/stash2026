@@ -1,0 +1,6 @@
+{
+  "name": "STASH",
+  "description": "A private, local-first place for screenshots, links, notes, files, and ideas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

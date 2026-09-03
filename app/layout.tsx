@@ -28,9 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var w=typeof window!=="undefined"?window:null;if(!w)return;var f=w.fetch?w.fetch.bind(w):null;try{Object.defineProperty(w,"fetch",{get:function(){return f;},set:function(v){f=v;},configurable:true,enumerable:true});}catch(e1){try{var p=Object.getPrototypeOf(w);if(p){Object.defineProperty(p,"fetch",{get:function(){return f;},set:function(v){f=v;},configurable:true,enumerable:true});}}catch(e2){}}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
       </body>

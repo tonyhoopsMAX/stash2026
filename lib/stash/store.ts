@@ -1,11 +1,19 @@
 'use client';
 
 import { create } from 'zustand';
-import { db, ensureSeeded } from './db';
+import { db, ensureSeeded, resetSampleData } from './db';
 import { defaultSettings } from './sample-data';
-import type { AppView, CreateItemInput, StashCollection, StashItem, StashSettings } from './types';
+import type { AppView, CreateItemInput, StashCollection, StashItem, StashItemType, StashSettings } from './types';
 
 const uid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const INITIAL_RECENT_SEARCHES = [
+  'Cabin design',
+  'Teak lounge chair',
+  'Tokyo travel',
+  'Kitchen renovation',
+  'Contract_v2.pdf',
+];
 
 interface StashState {
   items: StashItem[];
@@ -17,13 +25,20 @@ interface StashState {
   query: string;
   typeFilter: string;
   sort: 'newest' | 'oldest' | 'title';
+  layoutMode: 'list' | 'grid';
   addOpen: boolean;
+  initialTypeForAdd: StashItemType;
+  recentSearches: string[];
   load: () => Promise<void>;
   navigate: (view: AppView, activeId?: string) => void;
   setQuery: (query: string) => void;
   setTypeFilter: (filter: string) => void;
   setSort: (sort: StashState['sort']) => void;
+  setLayoutMode: (mode: 'list' | 'grid') => void;
   setAddOpen: (open: boolean) => void;
+  openAddWithType: (type: StashItemType) => void;
+  addRecentSearch: (query: string) => void;
+  clearRecentSearches: () => void;
   createItem: (input: CreateItemInput) => Promise<StashItem>;
   updateItem: (id: string, patch: Partial<StashItem>) => Promise<void>;
   toggleItem: (id: string, key: 'pinned' | 'favorite') => Promise<void>;
@@ -33,48 +48,188 @@ interface StashState {
   deleteForever: (id: string) => Promise<void>;
   createCollection: (name: string) => Promise<void>;
   updateSettings: (patch: Partial<StashSettings>) => Promise<void>;
+  resetToSample: () => Promise<void>;
 }
 
 export const useStashStore = create<StashState>((set, get) => ({
-  items: [], collections: [], settings: defaultSettings, ready: false, view: 'home', query: '', typeFilter: 'all', sort: 'newest', addOpen: false,
+  items: [],
+  collections: [],
+  settings: defaultSettings,
+  ready: false,
+  view: 'home',
+  query: '',
+  typeFilter: 'all',
+  sort: 'newest',
+  layoutMode: 'list',
+  addOpen: false,
+  initialTypeForAdd: 'screenshot',
+  recentSearches: INITIAL_RECENT_SEARCHES,
+
   load: async () => {
     await ensureSeeded();
-    const [items, collections, settings] = await Promise.all([db.items.toArray(), db.collections.toArray(), db.settings.get('settings')]);
-    set({ items, collections, settings: settings ?? defaultSettings, ready: true });
+    const [items, collections, settings] = await Promise.all([
+      db.items.toArray(),
+      db.collections.toArray(),
+      db.settings.get('settings'),
+    ]);
+
+    let savedSearches: string[] = INITIAL_RECENT_SEARCHES;
+    if (typeof window !== 'undefined') {
+      try {
+        const local = localStorage.getItem('stash-recent-searches');
+        if (local) savedSearches = JSON.parse(local);
+      } catch {
+        // ignore
+      }
+    }
+
+    set({
+      items,
+      collections,
+      settings: settings ? { ...defaultSettings, ...settings } : defaultSettings,
+      recentSearches: savedSearches,
+      ready: true,
+    });
   },
+
   navigate: (view, activeId) => {
     set({ view, activeId, addOpen: false });
-    if (typeof window !== 'undefined') window.history.replaceState({}, '', view === 'home' ? '/app' : `/app?view=${view}${activeId ? `&id=${encodeURIComponent(activeId)}` : ''}`);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(
+        {},
+        '',
+        view === 'home' ? '/app' : `/app?view=${view}${activeId ? `&id=${encodeURIComponent(activeId)}` : ''}`
+      );
+    }
   },
+
   setQuery: (query) => set({ query }),
   setTypeFilter: (typeFilter) => set({ typeFilter }),
   setSort: (sort) => set({ sort }),
+  setLayoutMode: (layoutMode) => set({ layoutMode }),
   setAddOpen: (addOpen) => set({ addOpen }),
+  openAddWithType: (initialTypeForAdd) => set({ addOpen: true, initialTypeForAdd }),
+
+  addRecentSearch: (query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const current = get().recentSearches.filter((s) => s.toLowerCase() !== trimmed.toLowerCase());
+    const next = [trimmed, ...current].slice(0, 8);
+    set({ recentSearches: next });
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('stash-recent-searches', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+  },
+
+  clearRecentSearches: () => {
+    set({ recentSearches: [] });
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('stash-recent-searches');
+      } catch {
+        // ignore
+      }
+    }
+  },
+
   createItem: async (input) => {
     const now = Date.now();
-    const item: StashItem = { id: uid(), title: input.title.trim() || 'Untitled', description: input.description?.trim() ?? '', notes: input.notes?.trim() ?? '', type: input.type, url: input.url?.trim(), tags: input.tags ?? [], collectionId: input.collectionId, reminderAt: input.reminderAt, blob: input.blob, fileName: input.fileName, mimeType: input.mimeType, size: input.size, createdAt: now, updatedAt: now, lastInteractedAt: now, pinned: false, favorite: false, archived: false };
+    const item: StashItem = {
+      id: uid(),
+      title: input.title.trim() || 'Untitled',
+      description: input.description?.trim() ?? '',
+      notes: input.notes?.trim() ?? '',
+      type: input.type,
+      url: input.url?.trim(),
+      tags: input.tags ?? [],
+      collectionId: input.collectionId,
+      reminderAt: input.reminderAt,
+      blob: input.blob,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      size: input.size,
+      imageUrl: input.imageUrl,
+      source: input.source || 'Direct capture',
+      imageCount: input.type === 'screenshot' || input.type === 'image' ? 1 : undefined,
+      createdAt: now,
+      updatedAt: now,
+      lastInteractedAt: now,
+      pinned: false,
+      favorite: false,
+      archived: false,
+    };
     await db.items.put(item);
     set({ items: [item, ...get().items], view: 'detail', activeId: item.id, addOpen: false });
     return item;
   },
+
   updateItem: async (id, patch) => {
     const changes = { ...patch, updatedAt: Date.now(), lastInteractedAt: Date.now() };
     await db.items.update(id, changes);
-    set({ items: get().items.map((item) => item.id === id ? { ...item, ...changes } : item) });
+    set({ items: get().items.map((item) => (item.id === id ? { ...item, ...changes } : item)) });
   },
+
   toggleItem: async (id, key) => {
-    const item = get().items.find((entry) => entry.id === id); if (!item) return;
+    const item = get().items.find((entry) => entry.id === id);
+    if (!item) return;
     await get().updateItem(id, { [key]: !item[key] });
   },
-  archiveItem: async (id) => { await get().updateItem(id, { archived: true }); set({ view: 'inbox', activeId: undefined }); },
-  trashItem: async (id) => { await get().updateItem(id, { deletedAt: Date.now(), archived: false }); set({ view: 'inbox', activeId: undefined }); },
-  restoreItem: async (id) => { await get().updateItem(id, { deletedAt: undefined, archived: false }); },
-  deleteForever: async (id) => { await db.items.delete(id); set({ items: get().items.filter((item) => item.id !== id) }); },
-  createCollection: async (name) => {
-    const collection: StashCollection = { id: uid(), name: name.trim() || 'Untitled collection', icon: 'folder', color: '#25dac5', createdAt: Date.now() };
-    await db.collections.put(collection); set({ collections: [...get().collections, collection] });
+
+  archiveItem: async (id) => {
+    await get().updateItem(id, { archived: true });
+    set({ view: 'inbox', activeId: undefined });
   },
+
+  trashItem: async (id) => {
+    await get().updateItem(id, { deletedAt: Date.now(), archived: false });
+    set({ view: 'inbox', activeId: undefined });
+  },
+
+  restoreItem: async (id) => {
+    await get().updateItem(id, { deletedAt: undefined, archived: false });
+  },
+
+  deleteForever: async (id) => {
+    await db.items.delete(id);
+    set({ items: get().items.filter((item) => item.id !== id) });
+  },
+
+  createCollection: async (name) => {
+    const collection: StashCollection = {
+      id: uid(),
+      name: name.trim() || 'Untitled collection',
+      icon: 'folder',
+      color: '#25dac5',
+      createdAt: Date.now(),
+    };
+    await db.collections.put(collection);
+    set({ collections: [...get().collections, collection] });
+  },
+
   updateSettings: async (patch) => {
-    const settings = { ...get().settings, ...patch }; await db.settings.put(settings); set({ settings });
+    const settings = { ...get().settings, ...patch };
+    await db.settings.put(settings);
+    set({ settings });
+  },
+
+  resetToSample: async () => {
+    await resetSampleData();
+    const [items, collections, settings] = await Promise.all([
+      db.items.toArray(),
+      db.collections.toArray(),
+      db.settings.get('settings'),
+    ]);
+    set({
+      items,
+      collections,
+      settings: settings ? { ...defaultSettings, ...settings } : defaultSettings,
+      recentSearches: INITIAL_RECENT_SEARCHES,
+      view: 'home',
+      activeId: undefined,
+    });
   },
 }));

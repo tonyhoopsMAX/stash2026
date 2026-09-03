@@ -20,8 +20,45 @@ class StashDatabase extends Dexie {
 export const db = new StashDatabase();
 
 export async function ensureSeeded() {
-  if (await db.settings.get('settings')) return;
+  const existingSettings = await db.settings.get('settings');
+  if (!existingSettings) {
+    await db.transaction('rw', db.items, db.collections, db.settings, async () => {
+      await db.items.bulkPut(sampleItems);
+      await db.collections.bulkPut(sampleCollections);
+      await db.settings.put(defaultSettings);
+    });
+    return;
+  }
+
+  // Backfill default settings if fields are missing
+  const updatedSettings: StashSettings = {
+    ...defaultSettings,
+    ...existingSettings,
+  };
+  await db.settings.put(updatedSettings);
+
+  // Backfill sample media paths if initial seed was plain
+  const cabinItem = await db.items.get('cabin');
+  if (cabinItem && !cabinItem.imageUrl) {
+    for (const sample of sampleItems) {
+      const existing = await db.items.get(sample.id);
+      if (existing) {
+        await db.items.update(sample.id, {
+          imageUrl: sample.imageUrl,
+          source: sample.source,
+          imageCount: sample.imageCount,
+        });
+      } else {
+        await db.items.put(sample);
+      }
+    }
+  }
+}
+
+export async function resetSampleData() {
   await db.transaction('rw', db.items, db.collections, db.settings, async () => {
+    await db.items.clear();
+    await db.collections.clear();
     await db.items.bulkPut(sampleItems);
     await db.collections.bulkPut(sampleCollections);
     await db.settings.put(defaultSettings);

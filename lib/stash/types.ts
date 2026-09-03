@@ -23,6 +23,9 @@ export interface StashItem {
   fileName?: string;
   size?: number;
   blob?: Blob;
+  imageUrl?: string;
+  source?: string;
+  imageCount?: number;
 }
 
 export interface StashCollection {
@@ -38,6 +41,12 @@ export interface StashSettings {
   theme: 'light' | 'dark' | 'system';
   accent: 'jade' | 'ocean' | 'orchid' | 'sunset' | 'mono';
   onboardingComplete: boolean;
+  autoBackup?: boolean;
+  notificationsEnabled?: boolean;
+  userName?: string;
+  userEmail?: string;
+  userTier?: string;
+  userAvatar?: string;
 }
 
 export interface CreateItemInput {
@@ -53,4 +62,6 @@ export interface CreateItemInput {
   fileName?: string;
   mimeType?: string;
   size?: number;
+  imageUrl?: string;
+  source?: string;
 }

@@ -18,12 +18,17 @@ export async function exportBackup() {
     asset: blob ? { mimeType: blob.type, data: await blobToData(blob) } : undefined,
   })));
   const payload: BackupPayload = { version: 1, exportedAt: new Date().toISOString(), items: portable, collections, settings: settings! };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `stash-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const filename = `stash-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  if (typeof document !== 'undefined') {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+  return new File([blob], filename, { type: 'application/json' });
 }
 
 export async function importBackup(file: File) {
