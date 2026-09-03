@@ -4,18 +4,27 @@ name: Deploy to GitHub Pages
 # publishes it via the official `actions/deploy-pages` action.
 #
 # Triggered on every push to `master` (and any `arena/**` working
-# branch) and on manual dispatch. The first deployment requires
-# Settings → Pages → Source = "GitHub Actions" in the repo UI; once
-# that is set, this workflow runs hands-off.
+# branch) and on manual dispatch. On pull requests, only the build
+# job runs — the actual deploy step is skipped, because GitHub Pages
+# can't accept a deployment from a PR head and the step would 404.
+#
+# The first deployment requires Settings → Pages → Source = "GitHub
+# Actions" in the repo UI; once that is set, this workflow runs
+# hands-off. No secrets are required.
 #
 # The deployed URL is
 #   https://<owner>.github.io/<repo>/
 # with a project-page base of `/<repo>`. Override `PUBLIC_BASE_PATH`
-# below (or via a repo variable) for root-hosted user/org sites or
-# custom domains.
+# via a repo variable for root-hosted user/org sites or custom
+# domains.
 
 on:
   push:
+    branches:
+      - master
+      - main
+      - arena/**
+  pull_request:
     branches:
       - master
       - main
@@ -33,8 +42,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-
-# Don't redeploy old commits if newer pushes landed in the meantime.
 
 jobs:
   build:
@@ -82,6 +89,12 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
+    # Only deploy on direct pushes to a release branch. Pull requests
+    # build the bundle (so reviewers can see the build is green) but
+    # do NOT trigger the actual deploy — GitHub Pages can't accept a
+    # deployment from a fork / PR head, and the deploy step would
+    # fail with 404 "Failed to create deployment".
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 10
