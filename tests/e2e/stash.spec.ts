@@ -122,7 +122,14 @@ test.describe('iPhone PWA polish', () => {
     }
   });
 
-  test('bottom-nav has 5 items and a clear click target per item', async ({ page }) => {
+  test('bottom-nav has 4 items + 1 FAB slot, each tap target >= 44px', async ({ page }) => {
+    // On >= 960px viewports the desktop sidebar replaces the dock and
+    // the bottom-nav is `display: none`. Skip the assertion there.
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width >= 960) {
+      test.skip(true, 'bottom-nav is hidden on desktop viewports');
+      return;
+    }
     await openApp(page);
     const startEmpty = page.getByRole('button', { name: 'Start empty' });
     if (await startEmpty.isVisible({ timeout: 5_000 }).catch(() => false)) {
@@ -131,8 +138,12 @@ test.describe('iPhone PWA polish', () => {
     }
     const dock = page.locator('nav.bottom-nav');
     await expect(dock).toBeVisible();
+    // 5-column grid: 4 buttons + 1 empty slot reserved for the FAB.
     const items = dock.locator('button.bottom-nav-item');
-    await expect(items).toHaveCount(5);
+    await expect(items).toHaveCount(4);
+    const gridTemplate = await dock.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
+    const columnCount = gridTemplate.split(/\s+/).filter(Boolean).length;
+    expect(columnCount).toBe(5);
     // Each dock item must be at least 44px tall to be a comfortable
     // tap target on iOS.
     const heights = await items.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
