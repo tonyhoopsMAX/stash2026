@@ -32,7 +32,7 @@ export function formatAge(timestamp: number) {
 }
 
 export function ItemRow({ item, compact = false }: { item: StashItem; compact?: boolean }) {
-  const { navigate, toggleItem, archiveItem, trashItem, restoreItem, deleteForever } = useStashStore();
+  const { navigate, toggleItem, updateItem, archiveItem, trashItem, restoreItem, deleteForever } = useStashStore();
   return (
     <article className={cn('item-row group', compact && 'item-row-compact')}>
       <button className="item-main focus-ring" onClick={() => navigate('detail', item.id)} aria-label={'Open ' + item.title}>
@@ -51,7 +51,8 @@ export function ItemRow({ item, compact = false }: { item: StashItem; compact?: 
           <DropdownMenuContent align="end" className="w-44 rounded-2xl p-2">
             {!item.deletedAt && <DropdownMenuItem onClick={() => toggleItem(item.id, 'pinned')}><Pin />{item.pinned ? 'Unpin' : 'Pin'}</DropdownMenuItem>}
             {!item.deletedAt && <DropdownMenuItem onClick={() => toggleItem(item.id, 'favorite')}><Heart />{item.favorite ? 'Unfavorite' : 'Favorite'}</DropdownMenuItem>}
-            {!item.deletedAt && <DropdownMenuItem onClick={() => archiveItem(item.id)}><Archive />Archive</DropdownMenuItem>}
+            {!item.deletedAt && !item.archived && <DropdownMenuItem onClick={() => archiveItem(item.id)}><Archive />Archive</DropdownMenuItem>}
+            {!item.deletedAt && item.archived && <DropdownMenuItem onClick={() => updateItem(item.id, { archived: false })}><RotateCcw />Return to inbox</DropdownMenuItem>}
             {!item.deletedAt && <DropdownMenuItem variant="destructive" onClick={() => trashItem(item.id)}><Trash2 />Move to trash</DropdownMenuItem>}
             {item.deletedAt && <DropdownMenuItem onClick={() => restoreItem(item.id)}><RotateCcw />Restore</DropdownMenuItem>}
             {item.deletedAt && <DropdownMenuItem variant="destructive" onClick={() => deleteForever(item.id)}><Trash2 />Delete forever</DropdownMenuItem>}

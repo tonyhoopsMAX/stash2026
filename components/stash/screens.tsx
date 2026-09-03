@@ -109,11 +109,12 @@ export function DetailScreen({ id }: { id?: string }) {
     <section><h2 className="small-heading">Tags</h2><div className="tag-row">{item.tags.length ? item.tags.map((tag) => <span key={tag}>#{tag}</span>) : <span>No tags</span>}</div></section>
     {collection && <section><h2 className="small-heading">Collection</h2><button onClick={() => navigate('collection', collection.id)} className="settings-row focus-ring"><span className="type-icon"><Sparkles /></span><span><strong>{collection.name}</strong><small>View collection</small></span><ChevronRight /></button></section>}
     <section><h2 className="small-heading">Reminder</h2><Surface className="reminder-strip"><span className="type-icon"><Bell /></span><div><strong>{item.reminderAt ? new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(item.reminderAt) : 'No reminder'}</strong><p>Use edit to choose a date and time.</p></div>{item.reminderAt && <button onClick={() => updateItem(item.id,{ reminderAt: undefined })}>Clear</button>}</Surface></section>
-    <div className="detail-buttons"><button className="secondary-button focus-ring" onClick={() => navigate('edit', item.id)}>Edit</button>{item.url && <a className="primary-button focus-ring" href={item.url} target="_blank" rel="noreferrer">Open link</a>}<button className="secondary-button focus-ring" onClick={() => archiveItem(item.id)}><Archive /> Archive</button><button className="danger-button focus-ring" onClick={() => trashItem(item.id)}><Trash2 /> Trash</button></div>
+    <div className="detail-buttons"><button className="secondary-button focus-ring" onClick={() => navigate('edit', item.id)}>Edit</button>{item.url && <a className="primary-button focus-ring" href={item.url} target="_blank" rel="noreferrer">Open link</a>}{item.archived ? <button className="secondary-button focus-ring" onClick={async () => { await updateItem(item.id, { archived: false }); navigate('inbox'); }}><RotateBackIcon /> Return to inbox</button> : <button className="secondary-button focus-ring" onClick={() => archiveItem(item.id)}><Archive /> Archive</button>}<button className="danger-button focus-ring" onClick={() => trashItem(item.id)}><Trash2 /> Trash</button></div>
   </div>;
 }
 
 function LinkIcon() { return <span aria-hidden>↗</span>; }
+function RotateBackIcon() { return <span aria-hidden>↩</span>; }
 
 export function EditScreen({ id }: { id?: string }) {
   const { items, collections, updateItem, navigate } = useStashStore();
