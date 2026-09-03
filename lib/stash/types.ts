@@ -41,12 +41,6 @@ export interface StashSettings {
   theme: 'light' | 'dark' | 'system';
   accent: 'jade' | 'ocean' | 'orchid' | 'sunset' | 'mono';
   onboardingComplete: boolean;
-  autoBackup?: boolean;
-  notificationsEnabled?: boolean;
-  userName?: string;
-  userEmail?: string;
-  userTier?: string;
-  userAvatar?: string;
 }
 
 export interface CreateItemInput {

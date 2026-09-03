@@ -30,6 +30,32 @@ import type { StashCollection, StashItem, StashItemType } from '@/lib/stash/type
 export const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
 
+/**
+ * Returns a stable display URL for an item's media.
+ *
+ * - If the item carries a persisted Blob (captured screenshot/image/file), a
+ *   fresh object URL is created from that Blob and revoked on cleanup, so the
+ *   image survives save, refresh, close and reopen.
+ * - Otherwise the persistent `imageUrl` (a bundled static asset path) is used.
+ * - A stale `blob:` string that may have been stored by older versions is never
+ *   trusted; the Blob is the source of truth.
+ */
+export function useItemMediaUrl(item: StashItem | undefined): string | undefined {
+  const [blobUrl, setBlobUrl] = useState<string>();
+
+  useEffect(() => {
+    if (!item?.blob) {
+      setBlobUrl(undefined);
+      return;
+    }
+    const url = URL.createObjectURL(item.blob);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [item?.blob]);
+
+  return blobUrl || (item?.imageUrl?.startsWith('blob:') ? undefined : item?.imageUrl);
+}
+
 export function Surface({
   children,
   className = '',
@@ -140,16 +166,7 @@ export function ItemThumbnail({
   item: StashItem;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const [blobUrl, setBlobUrl] = useState<string>();
-
-  useEffect(() => {
-    if (!item.blob) return;
-    const url = URL.createObjectURL(item.blob);
-    setBlobUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [item.blob]);
-
-  const displayUrl = item.imageUrl || blobUrl;
+  const displayUrl = useItemMediaUrl(item);
   const dimensionClass =
     size === 'sm' ? 'w-10 h-10 rounded-xl' :
     size === 'lg' ? 'w-16 h-16 rounded-2xl' : 'w-12 h-12 rounded-xl';
@@ -308,16 +325,7 @@ export function ItemRow({
 export function ItemGridCard({ item }: { item: StashItem }) {
   const { collections, navigate, toggleItem } = useStashStore();
   const collection = collections.find((c) => c.id === item.collectionId);
-  const [blobUrl, setBlobUrl] = useState<string>();
-
-  useEffect(() => {
-    if (!item.blob) return;
-    const url = URL.createObjectURL(item.blob);
-    setBlobUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [item.blob]);
-
-  const displayUrl = item.imageUrl || blobUrl;
+  const displayUrl = useItemMediaUrl(item);
 
   return (
     <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3 transition-all hover:border-[var(--stash-accent)]/40 hover:bg-white/[0.07] hover:shadow-lg">

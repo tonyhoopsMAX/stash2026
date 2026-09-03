@@ -7,13 +7,9 @@ import type { AppView, CreateItemInput, StashCollection, StashItem, StashItemTyp
 
 const uid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const INITIAL_RECENT_SEARCHES = [
-  'Cabin design',
-  'Teak lounge chair',
-  'Tokyo travel',
-  'Kitchen renovation',
-  'Contract_v2.pdf',
-];
+// Search history starts empty. It only reflects searches the user actually
+// performed, so we never advertise content that may not exist.
+const INITIAL_RECENT_SEARCHES: string[] = [];
 
 interface StashState {
   items: StashItem[];
@@ -66,30 +62,50 @@ export const useStashStore = create<StashState>((set, get) => ({
   recentSearches: INITIAL_RECENT_SEARCHES,
 
   load: async () => {
-    await ensureSeeded();
-    const [items, collections, settings] = await Promise.all([
-      db.items.toArray(),
-      db.collections.toArray(),
-      db.settings.get('settings'),
-    ]);
+    // Bounded load: if the IndexedDB open ever stalls (which intermittently
+    // happens under a fresh browser context), don't leave the app on the
+    // splash forever. Fall back to an empty, usable store after a timeout and
+    // log the situation so it is still visible in CI/console.
+    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((_resolve, reject) =>
+          setTimeout(() => reject(new Error(`STASH load timeout after ${ms}ms`)), ms)
+        ),
+      ]);
 
-    let savedSearches: string[] = INITIAL_RECENT_SEARCHES;
-    if (typeof window !== 'undefined') {
-      try {
-        const local = localStorage.getItem('stash-recent-searches');
-        if (local) savedSearches = JSON.parse(local);
-      } catch {
-        // ignore
+    try {
+      await withTimeout(ensureSeeded(), 8000);
+      const [items, collections, settings] = await withTimeout(
+        Promise.all([
+          db.items.toArray(),
+          db.collections.toArray(),
+          db.settings.get('settings'),
+        ]),
+        8000
+      );
+
+      let savedSearches: string[] = INITIAL_RECENT_SEARCHES;
+      if (typeof window !== 'undefined') {
+        try {
+          const local = localStorage.getItem('stash-recent-searches');
+          if (local) savedSearches = JSON.parse(local);
+        } catch {
+          // ignore
+        }
       }
-    }
 
-    set({
-      items,
-      collections,
-      settings: settings ? { ...defaultSettings, ...settings } : defaultSettings,
-      recentSearches: savedSearches,
-      ready: true,
-    });
+      set({
+        items,
+        collections,
+        settings: settings ? { ...defaultSettings, ...settings } : defaultSettings,
+        recentSearches: savedSearches,
+        ready: true,
+      });
+    } catch (err) {
+      console.warn('[stash] storage load timed out or failed; rendering with an empty store', err);
+      set({ items: [], collections: [], settings: defaultSettings, ready: true });
+    }
   },
 
   navigate: (view, activeId) => {
@@ -152,7 +168,10 @@ export const useStashStore = create<StashState>((set, get) => ({
       fileName: input.fileName,
       mimeType: input.mimeType,
       size: input.size,
-      imageUrl: input.imageUrl,
+      // Never persist a transient `blob:` object URL. When a real Blob is
+      // provided it is stored in IndexedDB and a fresh object URL is generated
+      // at render time. `imageUrl` is reserved for persistent static assets.
+      imageUrl: input.blob ? undefined : input.imageUrl,
       source: input.source || 'Direct capture',
       imageCount: input.type === 'screenshot' || input.type === 'image' ? 1 : undefined,
       createdAt: now,
@@ -226,8 +245,8 @@ export const useStashStore = create<StashState>((set, get) => ({
     set({
       items,
       collections,
-      settings: settings ? { ...defaultSettings, ...settings } : defaultSettings,
-      recentSearches: INITIAL_RECENT_SEARCHES,
+      settings: settings ? { ...defaultSettings, ...settings, onboardingComplete: true } : { ...defaultSettings, onboardingComplete: true },
+      recentSearches: [],
       view: 'home',
       activeId: undefined,
     });

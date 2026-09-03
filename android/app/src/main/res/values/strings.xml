@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">STASH</string>
+    <string name="title_activity_main">STASH</string>
+    <string name="package_name">com.stash.app</string>
+    <string name="custom_url_scheme">com.stash.app</string>
+</resources>

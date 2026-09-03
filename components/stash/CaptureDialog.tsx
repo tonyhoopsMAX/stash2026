@@ -111,8 +111,11 @@ export function CaptureDialog({
       fileName: file?.name,
       mimeType: file?.type,
       size: file?.size,
-      imageUrl: filePreview,
     });
+
+    // The Blob is persisted in IndexedDB; the transient preview URL must not
+    // be reused as a permanent image reference.
+    if (filePreview) URL.revokeObjectURL(filePreview);
 
     setTitle('');
     setDescription('');

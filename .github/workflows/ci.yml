@@ -1,0 +1,75 @@
+name: CI
+
+# Runs on pushes to the main development/release branches, on pull requests,
+# and on manual dispatch. Verifies the shared STASH React core end to end.
+on:
+  push:
+    branches:
+      - master
+      - main
+      - arena/**
+  pull_request:
+    branches:
+      - master
+      - main
+      - arena/**
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (typecheck, lint, unit, E2E, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies (lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Install Playwright Chromium + Linux dependencies
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Playwright E2E tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report (success or failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Surface E2E failure details as annotations
+        if: failure()
+        run: node scripts/e2e-summary.mjs
+
+      - name: Production / PWA build
+        run: pnpm build:web

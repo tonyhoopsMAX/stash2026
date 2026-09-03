@@ -2,7 +2,31 @@
 
 STASH is a private, local-first, installable PWA for saving screenshots, images, links, notes, files, and other things worth remembering. Version 1 stores application data and media in IndexedDB; no account, paid backend, or AI service is required.
 
-## Run locally
+## Build with GitHub Actions (no local toolchains)
+
+You do **not** need Android Studio, the Android SDK, Rust, Visual Studio, MSVC, or
+Playwright browsers installed on your machine. GitHub builds everything for you.
+
+### Build Android APK
+
+1. Open the **Actions** tab on GitHub.
+2. Click **Build Android APK**.
+3. Click **Run workflow** and choose the release branch (default `master`).
+4. Wait for the run to finish, then open the **STASH-Android-Debug** artifact and download `STASH-debug.apk`.
+
+### Build Windows App
+
+1. Open the **Actions** tab on GitHub.
+2. Click **Build Windows App**.
+3. Click **Run workflow** and choose the release branch.
+4. When the run finishes, open the **STASH-Windows** artifact and download `STASH.exe` / `STASH-Setup.exe`.
+
+> The Windows build is unsigned, so Windows SmartScreen may show
+> "Unknown Publisher". That is expected for this private/test build.
+
+---
+
+## Run locally (for developers)
 
 Requirements: Node.js 22.13 or newer and pnpm.
 
@@ -13,13 +37,24 @@ Open http://localhost:3000. The public site is at / and the application is at /a
 
 ## Validate and build
 
+    pnpm install
     pnpm lint
     pnpm test
-    pnpm exec playwright install chromium
-    pnpm test:e2e
-    pnpm build
+    pnpm build:web    # statically prerendered production bundle (recommended)
 
 The deployment bundle is produced in dist/. The Cloudflare Worker entry point is dist/server/index.js and static assets are in dist/client.
+
+## Native builds (Android & Windows)
+
+The same React core also ships as a **Capacitor Android** app (`android/`) and a
+**Tauri Windows** app (`src-tauri/`). Both consume the static `dist/native-web`
+bundle produced from the shared app. See [`BUILD.md`](./BUILD.md) for the
+exact commands and toolchain requirements.
+
+    pnpm build:web
+    pnpm build:native-web
+    pnpm android:sync && pnpm android:debug   # Android APK (needs Android SDK)
+    pnpm tauri:build                          # Windows installer (needs Rust/MSVC)
 
 ## Deploy at zero cost
 

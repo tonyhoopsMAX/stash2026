@@ -38,3 +38,17 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# TypeScript incremental cache
+*.tsbuildinfo
+
+# Capacitor generated / build output
+/android/.gradle/
+/android/app/build/
+/android/app/src/main/assets/public/
+/android/local.properties
+/android/capacitor-cordova-android-plugins/
+
+# Tauri build output
+/src-tauri/target/
+/src-tauri/gen/

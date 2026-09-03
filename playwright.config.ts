@@ -4,7 +4,11 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30_000,
   fullyParallel: true,
-  reporter: [['list']],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+  ],
   use: { baseURL: 'http://localhost:3000', trace: 'retain-on-failure' },
   webServer: { command: 'pnpm dev', url: 'http://localhost:3000', reuseExistingServer: true, timeout: 120_000 },
   projects: [
