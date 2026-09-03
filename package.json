@@ -9,7 +9,7 @@
     "postinstall": "node scripts/patch-vinext.mjs",
     "dev": "vinext dev",
     "build": "vinext build",
-    "start": "wrangler dev --config dist/server/wrangler.json",
+    "start": "vinext start",
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "vitest run",
