@@ -16,6 +16,33 @@
   --color-border: var(--border);
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
+  /* Shared responsive typography tokens — used by the PWA, Capacitor
+   * Android shell and the Tauri Windows shell so all three targets get
+   * identical, fluid type without hand-tuning each breakpoint. Values
+   * are clamp(min, fluid, max) so the scale collapses cleanly on small
+   * phones and breathes on tablets / desktop. */
+  --font-display: clamp(2.25rem, 7.5vw, 4.5rem);
+  --font-h1: clamp(1.75rem, 5.5vw, 3.25rem);
+  --font-h2: clamp(1.25rem, 3.2vw, 1.85rem);
+  --font-h3: clamp(1.05rem, 2.4vw, 1.35rem);
+  --font-body: clamp(0.95rem, 1.6vw, 1.05rem);
+  --font-caption: clamp(0.78rem, 1.4vw, 0.92rem);
+  --font-eyebrow: clamp(0.65rem, 1.2vw, 0.78rem);
+  --leading-display: 0.95;
+  --leading-heading: 1.12;
+  --leading-body: 1.6;
+  /* Heading / subtitle rhythm: positive top margin for a clean stack,
+   * no negative offsets anywhere in the app. */
+  --stack-heading: 0.5rem;
+  --stack-section: 1.5rem;
+  /* Bottom-nav reserved space. The dock itself is 4.8rem tall and sits
+   * .65rem above the safe area, so content needs at least
+   * 5.45rem + safe-area-inset-bottom of bottom padding to clear it on
+   * every device — including Android gesture nav and Windows devices
+   * with a taskbar. */
+  --bottom-nav-height: 4.8rem;
+  --bottom-nav-offset: 0.65rem;
+  --bottom-nav-reserve: calc(var(--bottom-nav-height) + var(--bottom-nav-offset) + env(safe-area-inset-bottom));
 }
 
 :root {
@@ -93,16 +120,29 @@ button { color: inherit; }
 .app-root { min-height: 100dvh; background: radial-gradient(circle at 30% -5%, rgb(var(--stash-accent-rgb) / .15), transparent 25rem); }
 .desktop-sidebar { display: none; }
 .app-stage { min-height: 100dvh; }
-.app-content { width: min(100%, 920px); margin: 0 auto; padding: 1rem 1rem calc(7.5rem + env(safe-area-inset-bottom)); }
+/* Bottom padding uses the shared --bottom-nav-reserve token so the
+ * content never hides behind the floating bottom-nav / FAB on any
+ * platform (PWA in a browser tab, Capacitor Android with gesture
+ * inset-bottom, Tauri Windows with a system taskbar). */
+.app-content { width: min(100%, 920px); margin: 0 auto; padding: 1rem 1rem calc(var(--bottom-nav-reserve) + 1.25rem); }
 .app-topbar { height: 3.5rem; padding: max(.8rem,env(safe-area-inset-top)) 1rem 0; display:flex; align-items:center; justify-content:flex-end; gap:.75rem; color:var(--muted-foreground); font-size:.78rem; }
 .app-topbar>span { display:flex; align-items:center; gap:.35rem; }
 .app-topbar svg { width:1rem; height:1rem; }
 .screen-stack { display:flex; flex-direction:column; gap:1.25rem; animation:screen-in .36s cubic-bezier(.2,.75,.2,1); }
 @keyframes screen-in { from { opacity:0; transform:translateY(8px) } }
 .page-header { display:flex; align-items:center; gap:.75rem; padding-top:.3rem; }
-.page-header h1 { font-size:clamp(2.35rem,8vw,4.75rem); line-height:.95; letter-spacing:-.055em; font-weight:650; }
-.eyebrow { color:var(--stash-accent); font-size:.72rem; letter-spacing:.34em; font-weight:700; }
-.page-subtitle { margin-top:-.85rem; font-size:1.03rem; color:var(--muted-foreground); }
+.page-header h1, .page-header-title { font-size: var(--font-h1); line-height: var(--leading-heading); letter-spacing: -.04em; font-weight: 650; }
+.page-header-title { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eyebrow { color: var(--stash-accent); font-size: var(--font-eyebrow); letter-spacing: .34em; font-weight: 700; }
+/* Subtitle: positive top spacing that respects the shared rhythm.
+ * No negative margins — they caused visual collisions on small
+ * phones, in the Android Capacitor shell, and on the Windows Tauri
+ * window where the taskbar reduces usable height. */
+.page-subtitle { margin-top: var(--stack-heading); font-size: var(--font-body); line-height: var(--leading-body); color: var(--muted-foreground); }
+/* Home greeting is the app's largest display text. It shares the
+ * --font-display token so the PWA, Android, and Windows shells
+ * render the same size at the same viewport width. */
+.home-greeting { font-size: var(--font-display); line-height: var(--leading-display); letter-spacing: -.05em; font-weight: 650; }
 .icon-button { display:inline-grid; place-items:center; width:2.75rem; height:2.75rem; border-radius:999px; border:1px solid var(--stash-line); background:var(--stash-surface); backdrop-filter:blur(18px); transition:.2s ease; }
 .icon-button:hover { background:rgb(var(--stash-accent-rgb) / .12); transform:translateY(-1px); }
 .icon-button svg { width:1.15rem; height:1.15rem; }
@@ -199,7 +239,7 @@ button { color: inherit; }
 .floating-add { position:fixed; z-index:42; left:50%; bottom:calc(1.8rem + env(safe-area-inset-bottom)); transform:translateX(-50%); width:3.85rem; height:3.85rem; border-radius:9999px; background:var(--stash-accent); color:#032e2a; box-shadow:0 12px 35px rgb(var(--stash-accent-rgb)/.45), inset 0 1px 0 rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center; transition:.28s cubic-bezier(.2,.8,.2,1); border:0; cursor:pointer; }
 .floating-add svg { width:1.75rem; height:1.75rem; }
 .floating-add.is-open { transform:translateX(-50%) rotate(90deg); }
-.bottom-nav { position:fixed; z-index:40; left:1rem; right:1rem; bottom:calc(.65rem + env(safe-area-inset-bottom)); height:4.8rem; display:grid; grid-template-columns:repeat(5,1fr); align-items:center; border:1px solid var(--stash-line); border-radius:2.2rem; background:color-mix(in srgb,var(--background) 78%,transparent); box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(28px) saturate(160%); }
+.bottom-nav { position:fixed; z-index:40; left:1rem; right:1rem; bottom:calc(var(--bottom-nav-offset) + env(safe-area-inset-bottom)); height: var(--bottom-nav-height); display:grid; grid-template-columns:repeat(5,1fr); align-items:center; border:1px solid var(--stash-line); border-radius:2.2rem; background:color-mix(in srgb,var(--background) 78%,transparent); box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(28px) saturate(160%); }
 .bottom-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.25rem; font-size:.68rem; font-weight:500; color:var(--muted-foreground); height:100%; transition:color .15s ease; cursor:pointer; }
 .bottom-nav-item.is-active { color:var(--stash-accent); }
 .bottom-nav-item svg { width:1.3rem; height:1.3rem; }
@@ -227,7 +267,10 @@ button { color: inherit; }
   .side-label { margin:1.25rem .8rem .45rem; color:var(--muted-foreground); font-size:.65rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
   .local-pill { margin-top:auto; display:flex; align-items:center; gap:.7rem; padding:.8rem; border:1px solid var(--border); border-radius:1rem; }.local-pill>span:first-child { width:.55rem;height:.55rem;border-radius:50%; }.online-dot { background:var(--stash-accent);box-shadow:0 0 12px var(--stash-accent); }.offline-dot { background:#ffb342; }.local-pill strong,.local-pill small { display:block; }.local-pill strong { font-size:.75rem; }.local-pill small { color:var(--muted-foreground); font-size:.65rem; }
   .app-topbar { padding-inline:2rem; }.bottom-nav { display:none; }.floating-add { left:auto; right:2rem; transform:none; bottom:2rem; }.floating-add.is-open { transform:rotate(90deg); }.fab-menu { left:auto; right:2.75rem; transform:none; bottom:7rem; }
-  .app-content { padding-bottom:5rem; }
+  /* On desktop, the bottom-nav is hidden, so we only need a modest
+   * breathing room — but we still respect the safe-area-inset in
+   * case of Windows devices with a non-overlay taskbar. */
+  .app-content { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
   .collection-grid { grid-template-columns:repeat(2,1fr); }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }

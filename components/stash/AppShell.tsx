@@ -544,7 +544,7 @@ export function AppShell() {
               <span className="app-icon">
                 <Sparkles size={24} />
               </span>
-              <p className="eyebrow tracking-[0.2em] text-xs font-bold text-[var(--stash-accent)]">
+              <p className="eyebrow">
                 WELCOME TO STASH
               </p>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mt-1">
