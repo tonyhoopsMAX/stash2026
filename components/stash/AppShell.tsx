@@ -17,6 +17,7 @@ import {
   Laptop,
   Lightbulb,
   Link2,
+  Palette,
   Plus,
   Search,
   Settings,
@@ -43,6 +44,7 @@ import {
   SettingsScreen,
 } from './screens';
 import { cn } from './ui';
+import { applyStatusBar, registerBackHandler } from '@/lib/stash/platform';
 import { useStashStore } from '@/lib/stash/store';
 import type { AppView, StashItemType } from '@/lib/stash/types';
 
@@ -122,6 +124,17 @@ export function AppShell() {
     window.addEventListener('online', syncOnline);
     window.addEventListener('offline', syncOnline);
     syncOnline();
+
+    // Native platform integrations (status bar / Android back button).
+    applyStatusBar();
+    registerBackHandler(() => {
+      const current = useStashStore.getState().view;
+      if (current !== 'home') {
+        useStashStore.getState().navigate('home');
+        return true;
+      }
+      return false;
+    });
 
     return () => {
       clearTimeout(timer);
@@ -499,21 +512,14 @@ export function AppShell() {
             <span>Settings</span>
           </button>
 
-          {/* 5. Profile / Alex Morgan Avatar with Status Dot */}
+          {/* 5. Appearance — STASH has no account/profile */}
           <button
             onClick={() => navigate('appearance')}
             className={cn('bottom-nav-item focus-ring', view === 'appearance' && 'is-active')}
-            aria-label="Profile"
+            aria-label="Appearance"
           >
-            <div className="relative">
-              <img
-                src={settings.userAvatar || '/assets/alex_morgan.jpg'}
-                alt="Alex Morgan"
-                className="h-6 w-6 rounded-full object-cover border border-white/20"
-              />
-              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--stash-accent)] border border-[#071415]" />
-            </div>
-            <span>Profile</span>
+            <Palette size={20} />
+            <span>Theme</span>
           </button>
         </nav>
       </div>
@@ -561,15 +567,29 @@ export function AppShell() {
                   Instant full-text local search and smart filters
                 </span>
               </div>
-              <button
-                className="primary-button focus-ring w-full rounded-full bg-[var(--stash-accent)] py-3 font-bold text-[#032e2a]"
-                onClick={async () => {
-                  await store.updateSettings({ onboardingComplete: true });
-                  setOnboarding(false);
-                }}
-              >
-                Enter your STASH
-              </button>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <button
+                  className="primary-button focus-ring w-full rounded-full bg-[var(--stash-accent)] py-3 font-bold text-[#032e2a] hover:brightness-105"
+                  onClick={async () => {
+                    await store.updateSettings({ onboardingComplete: true });
+                    setOnboarding(false);
+                  }}
+                >
+                  Start empty
+                </button>
+                <button
+                  className="secondary-button focus-ring w-full rounded-full border border-white/20 bg-white/5 py-3 font-bold text-white hover:bg-white/10"
+                  onClick={async () => {
+                    await store.resetToSample();
+                    setOnboarding(false);
+                  }}
+                >
+                  Explore demo
+                </button>
+              </div>
+              <p className="mt-3 text-center text-xs text-neutral-400">
+                No account required. Everything stays on this device.
+              </p>
             </motion.section>
           </motion.div>
         )}

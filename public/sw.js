@@ -1,4 +1,4 @@
-// STASH Service Worker
+// STASH Service Worker — offline-first app shell for the local-first PWA.
 const CACHE_NAME = 'stash-pwa-v1';
 const PRECACHE_ASSETS = [
   '/',
@@ -22,6 +22,8 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll(PRECACHE_ASSETS))
       .then(() => self.skipWaiting())
       .catch((err) => {
+        // Precache of optional screenshots/assets can fail on a cold install;
+        // still let the worker activate so the app shell is available offline.
         console.warn('[SW] Precache failed:', err);
         return self.skipWaiting();
       })
@@ -34,9 +36,7 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
+          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
         )
       )
       .then(() => self.clients.claim())
@@ -45,20 +45,13 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-
-  // Only handle GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+  // Only handle same-origin requests. External links are opened in the browser.
+  if (url.origin !== self.location.origin) return;
 
-  // Avoid intercepting API routes or non-origin analytics
-  if (url.origin !== self.location.origin) {
-    return;
-  }
-
-  // Navigation requests: Network-first, fallback to cache
+  // Navigation requests: network-first with a cached app-shell fallback.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -89,7 +82,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: Stale-While-Revalidate
+  // Static assets: stale-while-revalidate.
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request)
@@ -104,7 +97,6 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => cachedResponse);
-
       return cachedResponse || fetchPromise;
     })
   );

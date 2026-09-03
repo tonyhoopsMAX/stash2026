@@ -2,7 +2,6 @@ import { sites } from '@openai/sites-vite-plugin';
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
 import hostingConfig from './.openai/hosting.json';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
@@ -47,69 +46,17 @@ export default defineConfig(async () => {
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      host: '0.0.0.0',
+      ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),
+    },
+    optimizeDeps: { exclude: ['lucide-react'] },
     plugins: [
       vinext(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        injectRegister: 'auto',
-        includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png'],
-        manifest: {
-          id: '/',
-          name: 'STASH — Save now. Find it when it matters.',
-          short_name: 'STASH',
-          description: 'A private, local-first place for screenshots, links, notes, files, and ideas.',
-          start_url: '/app',
-          scope: '/',
-          display: 'standalone',
-          orientation: 'any',
-          dir: 'ltr',
-          lang: 'en-US',
-          background_color: '#061112',
-          theme_color: '#061112',
-          categories: ['productivity', 'utilities'],
-          icons: [
-            { src: '/pwa-64x64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
-            { src: '/apple-touch-icon-180x180.png', sizes: '180x180', type: 'image/png', purpose: 'any' },
-            { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-            { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          ],
-          screenshots: [
-            {
-              src: '/screenshot-desktop.png',
-              sizes: '1280x720',
-              type: 'image/png',
-              form_factor: 'wide',
-              label: 'STASH Desktop App',
-            },
-            {
-              src: '/screenshot-mobile.png',
-              sizes: '750x1334',
-              type: 'image/png',
-              form_factor: 'narrow',
-              label: 'STASH Mobile App',
-            },
-          ],
-          shortcuts: [
-            {
-              name: 'Open STASH',
-              short_name: 'STASH',
-              description: 'Open your local items',
-              url: '/app',
-              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-          navigateFallback: '/app',
-          cleanupOutdatedCaches: true,
-        },
-        devOptions: { enabled: true },
-      }),
+      // The PWA is fully manual: `public/sw.js` precaches the app shell and
+      // `public/manifest.webmanifest` describes the installable app. This is
+      // more reliable for the Server-Components (vinext) build than the
+      // auto-injected workbox service worker.
       sites(),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },

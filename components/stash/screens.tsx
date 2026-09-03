@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   Archive,
@@ -45,11 +45,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { exportBackup, importBackup } from '@/lib/stash/backup';
+import { pickFile } from '@/lib/stash/platform';
 import { rankForResurface } from '@/lib/stash/resurface';
 import { searchItems } from '@/lib/stash/search';
 import { useStashStore } from '@/lib/stash/store';
-import type { StashItemType } from '@/lib/stash/types';
-import { cn, CollectionPill, EmptyState, formatAge, formatItemMetadata, ItemGridCard, ItemRow, ItemThumbnail, ItemTypeIcon, Surface } from './ui';
+import type { StashItem, StashItemType } from '@/lib/stash/types';
+import { cn, CollectionPill, EmptyState, formatAge, formatItemMetadata, ItemGridCard, ItemRow, ItemThumbnail, ItemTypeIcon, Surface, useItemMediaUrl } from './ui';
 
 export function PageHeader({
   title,
@@ -92,6 +93,55 @@ const quickTypes: Array<{ type: StashItemType; label: string; icon: typeof FileT
   { type: 'idea', label: 'Idea', icon: Lightbulb },
 ];
 
+function ResurfaceCard({ item, onClick }: { item: StashItem; onClick: () => void }) {
+  const mediaUrl = useItemMediaUrl(item);
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex flex-col justify-between shrink-0 w-52 h-64 snap-start overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#0d1f21] p-4 text-left transition-transform hover:scale-[1.02] focus-ring shadow-lg"
+    >
+      {mediaUrl ? (
+        <>
+          <img
+            src={mediaUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover brightness-[0.65] transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#091718] via-transparent to-black/40" />
+        </>
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-950/70 to-[#0a1819]" />
+      )}
+
+      <div className="relative z-10 flex items-center justify-between w-full">
+        <span className="rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white/90">
+          {formatAge(item.createdAt)}
+        </span>
+        {item.favorite && <Star size={14} className="fill-[var(--stash-accent)] text-[var(--stash-accent)]" />}
+      </div>
+
+      <div className="relative z-10 mt-auto">
+        <strong className="block text-sm font-bold text-white line-clamp-2 leading-snug">
+          {item.title}
+        </strong>
+        {item.description && (
+          <p className="mt-1 text-xs text-white/70 line-clamp-2">
+            {item.description}
+          </p>
+        )}
+        <div className="mt-2.5 flex items-center justify-between">
+          <span className="text-[10px] text-teal-300 uppercase tracking-wider font-semibold">
+            {item.type}
+          </span>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-teal-300 backdrop-blur-sm">
+            <ItemTypeIcon type={item.type} size={12} />
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => void }) {
   const { items, collections, navigate, setTypeFilter } = useStashStore();
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -104,10 +154,10 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   const stats = [
-    { label: 'Unsorted', count: inboxUnsorted || 12, icon: Layers, filter: 'all' },
-    { label: 'Links', count: active.filter((i) => i.type === 'link').length || 7, icon: Link2, filter: 'link' },
-    { label: 'Notes', count: active.filter((i) => i.type === 'note').length || 4, icon: FileText, filter: 'note' },
-    { label: 'Files', count: active.filter((i) => i.type === 'file').length || 3, icon: File, filter: 'file' },
+    { label: 'Unsorted', count: inboxUnsorted, icon: Layers, filter: 'all' },
+    { label: 'Links', count: active.filter((i) => i.type === 'link').length, icon: Link2, filter: 'link' },
+    { label: 'Notes', count: active.filter((i) => i.type === 'note').length, icon: FileText, filter: 'note' },
+    { label: 'Files', count: active.filter((i) => i.type === 'file').length, icon: File, filter: 'file' },
   ];
 
   return (
@@ -212,20 +262,20 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
               <Check size={20} />
             </span>
             <div>
-              <strong className="block text-sm font-semibold text-foreground">Review your 5 saved items</strong>
-              <p className="text-xs text-muted-foreground mt-0.5">Spaced repetition resurfaces what matters most</p>
+              <strong className="block text-sm font-semibold text-foreground">Review your {active.length} saved item{active.length === 1 ? '' : 's'}</strong>
+              <p className="text-xs text-muted-foreground mt-0.5">Deterministic resurfacing brings your best finds back</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden xs:flex -space-x-2">
-              <img src="/assets/cabin.jpg" alt="" className="h-7 w-7 rounded-full object-cover border border-black" />
-              <img src="/assets/skincare.jpg" alt="" className="h-7 w-7 rounded-full object-cover border border-black" />
-              <img src="/assets/tokyo.jpg" alt="" className="h-7 w-7 rounded-full object-cover border border-black" />
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-900/80 text-[10px] font-bold text-teal-200 border border-black">
-                +3
-              </div>
-            </div>
+            {resurfaced.slice(0, 3).map((item) => (
+              <ItemThumbnail key={item.id} item={item} size="sm" />
+            ))}
+            {resurfaced.length > 3 && (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-900/80 text-[10px] font-bold text-teal-200 border border-black">
+                +{resurfaced.length - 3}
+              </span>
+            )}
             <ChevronRight size={18} className="text-muted-foreground ml-1" />
           </div>
         </button>
@@ -242,50 +292,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
 
         <div className="resurface-grid flex gap-3.5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
           {resurfaced.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navigate('detail', item.id)}
-              className="relative flex flex-col justify-between shrink-0 w-52 h-64 snap-start overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#0d1f21] p-4 text-left transition-transform hover:scale-[1.02] focus-ring shadow-lg"
-            >
-              {item.imageUrl ? (
-                <>
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover brightness-[0.65] transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#091718] via-transparent to-black/40" />
-                </>
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-950/70 to-[#0a1819]" />
-              )}
-
-              <div className="relative z-10 flex items-center justify-between w-full">
-                <span className="rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white/90">
-                  {formatAge(item.createdAt)}
-                </span>
-                {item.favorite && <Star size={14} className="fill-[var(--stash-accent)] text-[var(--stash-accent)]" />}
-              </div>
-
-              <div className="relative z-10 mt-auto">
-                <strong className="block text-sm font-bold text-white line-clamp-2 leading-snug">
-                  {item.title}
-                </strong>
-                {item.description && (
-                  <p className="mt-1 text-xs text-white/70 line-clamp-2">
-                    {item.description}
-                  </p>
-                )}
-                <div className="mt-2.5 flex items-center justify-between">
-                  <span className="text-[10px] text-teal-300 uppercase tracking-wider font-semibold">
-                    {item.type}
-                  </span>
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-teal-300 backdrop-blur-sm">
-                    <ItemTypeIcon type={item.type} size={12} />
-                  </span>
-                </div>
-              </div>
-            </button>
+            <ResurfaceCard key={item.id} item={item} onClick={() => navigate('detail', item.id)} />
           ))}
         </div>
       </section>
@@ -322,7 +329,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
                 </span>
                 <div>
                   <strong className="block text-sm font-semibold text-foreground truncate">{collection.name}</strong>
-                  <small className="text-xs text-muted-foreground">{count || 28} items</small>
+                  <small className="text-xs text-muted-foreground">{count} item{count === 1 ? '' : 's'}</small>
                 </div>
               </button>
             );
@@ -367,7 +374,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
               Remember Today — Daily Review
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Review your 5 active memory items to keep ideas fresh in mind.
+              Review your top active items to keep ideas fresh in mind.
             </DialogDescription>
           </DialogHeader>
 
@@ -465,11 +472,11 @@ export function ListScreen({ mode }: { mode: ListMode }) {
   }
 
   const smartFilters = [
-    { type: 'note', label: 'Notes', count: items.filter((i) => i.type === 'note').length || 128, icon: FileText },
-    { type: 'link', label: 'Links', count: items.filter((i) => i.type === 'link').length || 342, icon: Link2 },
-    { type: 'file', label: 'Files', count: items.filter((i) => i.type === 'file').length || 86, icon: File },
-    { type: 'screenshot', label: 'Screenshots', count: items.filter((i) => i.type === 'screenshot' || i.type === 'image').length || 203, icon: Camera },
-    { type: 'idea', label: 'Ideas', count: items.filter((i) => i.type === 'idea').length || 57, icon: Lightbulb },
+    { type: 'note', label: 'Notes', count: items.filter((i) => i.type === 'note').length, icon: FileText },
+    { type: 'link', label: 'Links', count: items.filter((i) => i.type === 'link').length, icon: Link2 },
+    { type: 'file', label: 'Files', count: items.filter((i) => i.type === 'file').length, icon: File },
+    { type: 'screenshot', label: 'Screenshots', count: items.filter((i) => i.type === 'screenshot' || i.type === 'image').length, icon: Camera },
+    { type: 'idea', label: 'Ideas', count: items.filter((i) => i.type === 'idea').length, icon: Lightbulb },
   ];
 
   return (
@@ -870,6 +877,8 @@ export function DetailScreen({ id }: { id?: string }) {
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [reminderDate, setReminderDate] = useState('');
 
+  const mediaUrl = useItemMediaUrl(item);
+
   useEffect(() => {
     if (item) {
       setNotesText(item.notes || '');
@@ -991,9 +1000,9 @@ export function DetailScreen({ id }: { id?: string }) {
 
       {/* Hero Media Card (Stash 5) */}
       <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-neutral-900 shadow-2xl">
-        {item.imageUrl ? (
+        {mediaUrl ? (
           <div className="relative h-64 sm:h-80 w-full overflow-hidden">
-            <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+            <img src={mediaUrl} alt={item.title} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
           </div>
         ) : (
@@ -1183,7 +1192,7 @@ export function DetailScreen({ id }: { id?: string }) {
                   : 'No reminder scheduled'}
               </strong>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {item.reminderAt ? 'STASH will notify you' : 'Schedule a review nudge'}
+                {item.reminderAt ? 'You’ll see it in Reminders' : 'Schedule an in-app review nudge'}
               </p>
             </div>
           </div>
@@ -1450,7 +1459,7 @@ export function EditScreen({ id }: { id?: string }) {
 }
 
 export function SettingsScreen() {
-  const { settings, navigate, resetToSample } = useStashStore();
+  const { navigate, resetToSample } = useStashStore();
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
@@ -1459,50 +1468,18 @@ export function SettingsScreen() {
       <PageHeader eyebrow="STASH" title="Settings" />
       <p className="page-subtitle text-muted-foreground mt-[-0.5rem]">Customize your experience.</p>
 
-      {/* User Profile Card (Stash 2) */}
-      <Surface className="rounded-[2rem] border border-white/15 bg-white/[0.04] p-4 backdrop-blur-2xl shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="relative">
-              <img
-                src={settings.userAvatar || '/assets/alex_morgan.jpg'}
-                alt={settings.userName || 'Alex Morgan'}
-                className="h-14 w-14 rounded-full object-cover border-2 border-[var(--stash-accent)]"
-              />
-              <span className="absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--stash-accent)] text-neutral-950 font-bold text-[9px]">
-                ✓
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <strong className="text-base font-bold text-foreground">{settings.userName || 'Alex Morgan'}</strong>
-                <span className="rounded-full bg-[var(--stash-accent)]/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--stash-accent)] border border-[var(--stash-accent)]/30">
-                  💎 {settings.userTier || 'STASH Pro'}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">{settings.userEmail || 'alex.morgan@mail.com'}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('appearance')}
-            className="text-xs font-semibold text-[var(--stash-accent)] hover:underline"
-          >
-            Manage Account &gt;
-          </button>
-        </div>
-      </Surface>
-
-      {/* Privacy Hero Banner (Stash 6) */}
+      {/* Local-First / Privacy Hero Banner (Stash 6) */}
       <Surface className="rounded-[2rem] border border-white/15 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-xl overflow-hidden relative">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-[var(--stash-accent)] mb-2">
               <ShieldCheck size={18} />
-              <span className="text-xs font-bold uppercase tracking-wider">Local-First Sandbox</span>
+              <span className="text-xs font-bold uppercase tracking-wider">No account required</span>
             </div>
             <h2 className="text-lg font-bold text-foreground">Private by default, stored locally</h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Everything you save in STASH lives strictly on this device in IndexedDB. No server accounts, no tracking.
+              STASH has no accounts, subscriptions, or cloud backend. Everything you save lives on this device in
+              IndexedDB.
             </p>
             <button
               onClick={() => setPrivacyModalOpen(true)}
@@ -1513,7 +1490,7 @@ export function SettingsScreen() {
           </div>
 
           <div className="shrink-0 w-24 h-24 hidden sm:block">
-            <img src="/assets/safe_vault.jpg" alt="Local Security Safe" className="w-full h-full object-cover rounded-2xl border border-white/10" />
+            <img src="/assets/safe_vault.jpg" alt="Local-only vault" className="w-full h-full object-cover rounded-2xl border border-white/10" />
           </div>
         </div>
       </Surface>
@@ -1542,7 +1519,7 @@ export function SettingsScreen() {
               </span>
               <div>
                 <strong className="block text-sm font-semibold text-foreground">Storage & Backup</strong>
-                <small className="text-xs text-muted-foreground">2.4 GB of 10 GB used • Daily auto-backup</small>
+                <small className="text-xs text-muted-foreground">Local usage • Export and import your data</small>
               </div>
             </div>
             <ChevronRight size={18} className="text-muted-foreground" />
@@ -1554,8 +1531,8 @@ export function SettingsScreen() {
                 <Bell size={18} />
               </span>
               <div>
-                <strong className="block text-sm font-semibold text-foreground">Push Notifications</strong>
-                <small className="text-xs text-muted-foreground">Customize alerts and resurfacing reminders</small>
+                <strong className="block text-sm font-semibold text-foreground">Reminders</strong>
+                <small className="text-xs text-muted-foreground">In-app review nudges for saved items</small>
               </div>
             </div>
             <ChevronRight size={18} className="text-muted-foreground" />
@@ -1581,7 +1558,7 @@ export function SettingsScreen() {
               </span>
               <div>
                 <strong className="block text-sm font-semibold text-foreground">About STASH</strong>
-                <small className="text-xs text-muted-foreground">Version 2.4.1 • What’s new</small>
+                <small className="text-xs text-muted-foreground">Version 1.0.0 • What’s new</small>
               </div>
             </div>
             <ChevronRight size={18} className="text-muted-foreground" />
@@ -1685,7 +1662,7 @@ export function AppearanceScreen() {
             </span>
             <div>
               <strong className="block text-sm font-semibold text-foreground">Dark mode</strong>
-              <small className="text-xs text-muted-foreground">Always on • Reduce glare and improve focus</small>
+              <small className="text-xs text-muted-foreground">Toggle between dark and light appearance</small>
             </div>
           </div>
           <Switch
@@ -1794,12 +1771,40 @@ export function AppearanceScreen() {
   );
 }
 
-export function BackupScreen() {
-  const { items, load, navigate, settings, updateSettings } = useStashStore();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState('');
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** index;
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+}
 
-  const estimate = useMemo(() => items.reduce((sum, item) => sum + (item.size ?? 0), 0), [items]);
+export function BackupScreen() {
+  const { items, load, navigate } = useStashStore();
+  const [status, setStatus] = useState('');
+  const [storage, setStorage] = useState<{ usage: number; quota: number } | null>(null);
+  const [storageUnsupported, setStorageUnsupported] = useState(false);
+
+  // Real browser storage estimation. Never hard-code a quota.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
+      setStorageUnsupported(true);
+      return;
+    }
+    let cancelled = false;
+    navigator.storage
+      .estimate()
+      .then((estimate) => {
+        if (cancelled) return;
+        setStorage({ usage: estimate.usage ?? 0, quota: estimate.quota ?? 0 });
+      })
+      .catch(() => {
+        if (!cancelled) setStorageUnsupported(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onImport = async (file?: File) => {
     if (!file) return;
@@ -1812,42 +1817,53 @@ export function BackupScreen() {
     }
   };
 
+  const handleImport = async () => {
+    const file = await pickFile();
+    if (file) await onImport(file);
+  };
+
+  const usagePercent = storage && storage.quota > 0 ? Math.min(100, (storage.usage / storage.quota) * 100) : 0;
+
   return (
     <div className="screen-stack space-y-5">
       <PageHeader back={() => navigate('settings')} eyebrow="SETTINGS" title="Storage & Backup" />
 
-      {/* Storage Gauge Card (Stash 2) */}
+      {/* Storage Gauge Card */}
       <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
             <strong className="text-base font-bold text-foreground">Storage Usage</strong>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {items.length} items saved locally in IndexedDB
+              {items.length} item{items.length === 1 ? '' : 's'} saved locally in IndexedDB
             </p>
           </div>
-          <span className="text-sm font-semibold text-[var(--stash-accent)]">
-            {estimate > 0 ? `${(estimate / (1024 * 1024)).toFixed(1)} MB` : '2.4 GB'} of 10 GB
-          </span>
+          {storage ? (
+            <span className="text-sm font-semibold text-[var(--stash-accent)]">
+              {formatBytes(storage.usage)} of {formatBytes(storage.quota)}
+            </span>
+          ) : (
+            <span className="text-sm font-semibold text-muted-foreground">
+              {storageUnsupported ? 'Estimate unavailable' : 'Estimating…'}
+            </span>
+          )}
         </div>
 
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="h-full bg-[var(--stash-accent)] rounded-full" style={{ width: '24%' }} />
-        </div>
-      </Surface>
-
-      {/* Auto Backup Toggle (Stash 2) */}
-      <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <strong className="block text-sm font-semibold text-foreground">Auto Backup</strong>
-            <small className="text-xs text-muted-foreground">Daily local snapshots keep your data safe</small>
-          </div>
-          <Switch
-            checked={settings.autoBackup ?? true}
-            onCheckedChange={(checked) => updateSettings({ autoBackup: checked })}
-            aria-label="Auto backup switch"
-          />
-        </div>
+        {storage ? (
+          <progress
+            value={Math.round(usagePercent)}
+            max={100}
+            className="storage-meter w-full"
+            aria-label="Browser storage used"
+          >
+            {Math.round(usagePercent)}%
+          </progress>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {storageUnsupported
+              ? 'This browser does not expose the Storage API, so the quota cannot be measured here.'
+              : 'Calculating your browser storage quota…'}
+          </p>
+        )}
       </Surface>
 
       {/* Export & Import Grid */}
@@ -1861,12 +1877,12 @@ export function BackupScreen() {
           </span>
           <strong className="text-base font-semibold text-foreground">Export Backup</strong>
           <span className="text-xs text-muted-foreground">
-            Download a portable, complete JSON archive including images and blobs.
+            Download a portable JSON archive including attached media files.
           </span>
         </button>
 
         <button
-          onClick={() => inputRef.current?.click()}
+          onClick={handleImport}
           className="flex flex-col items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition-all hover:bg-white/[0.07] hover:border-white/20 focus-ring"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 mb-1">
@@ -1879,13 +1895,11 @@ export function BackupScreen() {
         </button>
       </div>
 
-      <input ref={inputRef} hidden type="file" accept=".json,application/json" onChange={(e) => onImport(e.target.files?.[0])} />
-
       {status && <div className="rounded-xl bg-teal-500/20 p-3 text-xs font-medium text-teal-200">{status}</div>}
 
       <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex items-center gap-3 text-xs text-muted-foreground">
         <ShieldCheck size={20} className="text-[var(--stash-accent)] shrink-0" />
-        <p>Your backups are unencrypted JSON. Keep them on a trusted drive or secure USB device.</p>
+        <p>Backups are manual — there is no automatic cloud backup. They are unencrypted JSON; keep them somewhere you trust.</p>
       </div>
     </div>
   );
@@ -1961,7 +1975,7 @@ export function AboutScreen() {
           STASH is a private, local-first memory space for the useful things that usually disappear across tabs, screenshots, files, and notes.
         </p>
         <span className="text-xs text-[var(--stash-accent)] font-semibold block pt-2">
-          Version 2.4.1 • Release Candidate
+          Version 1.0.0
         </span>
       </Surface>
 

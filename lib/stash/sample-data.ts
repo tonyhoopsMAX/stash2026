@@ -241,11 +241,5 @@ export const defaultSettings: StashSettings = {
   id: 'settings',
   theme: 'dark',
   accent: 'jade',
-  onboardingComplete: true,
-  autoBackup: true,
-  notificationsEnabled: true,
-  userName: 'Alex Morgan',
-  userEmail: 'alex.morgan@mail.com',
-  userTier: 'STASH Pro',
-  userAvatar: '/assets/alex_morgan.jpg',
+  onboardingComplete: false,
 };
