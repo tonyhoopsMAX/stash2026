@@ -4,6 +4,35 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* iOS PWA polish — applies to the shared React core so the same
+ * Capacitor Android / Tauri Windows shells and the PWA all benefit.
+ * Kept at the very top of the file so it can be overridden by Tailwind
+ * utilities on a per-element basis when needed. */
+html, body {
+  /* Disable iOS Safari's blue tap rectangle; we use :focus-visible rings. */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent double-tap zoom on form controls without breaking pinch-zoom. */
+  touch-action: manipulation;
+  /* Avoid iOS text-size adjust after orientation change. */
+  -webkit-text-size-adjust: 100%;
+}
+input, textarea, select, button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* Allow pinch-zoom on text inside long-form areas (privacy / terms) but
+ * block it on app chrome to keep the dock and FAB anchored. */
+.app-stage, .bottom-nav, .floating-add, .fab-menu, .onboarding-backdrop {
+  touch-action: manipulation;
+}
+/* Inputs on iOS inherit a 16px font-size by default, which iOS Safari
+ * then refuses to zoom on focus. The shared form fields already use a
+ * larger font; this rule is a backstop for any future input. */
+input, textarea, select { font-size: max(16px, 1em); }
+/* Buttons inside .app-stage should not be sticky-tappable (the long
+ * press that summons the iOS callout menu). */
+button { -webkit-touch-callout: none; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,6 +72,23 @@
   --bottom-nav-height: 4.8rem;
   --bottom-nav-offset: 0.65rem;
   --bottom-nav-reserve: calc(var(--bottom-nav-height) + var(--bottom-nav-offset) + env(safe-area-inset-bottom));
+  /* Landscape phone docks: on a 932x430 iPhone Pro Max in landscape
+   * the bottom-nav at 4.8rem is one third of the available height. A
+   * slimmer dock keeps the experience usable. */
+  --bottom-nav-height-landscape: 3.6rem;
+  --bottom-nav-reserve-landscape: calc(var(--bottom-nav-height-landscape) + var(--bottom-nav-offset) + env(safe-area-inset-bottom));
+  /* iPhone landscape notches consume ~.88rem on the leading edge.
+   * We add that to the .app-content horizontal padding so the dock and
+   * the FAB don't sit under the notch. */
+  --inset-side: max(env(safe-area-inset-left), env(safe-area-inset-right));
+  /* Touch target minimum: 44pt is the Apple HIG recommendation. We
+   * apply it to any element tagged .touch-target. */
+  --touch-target: 2.75rem;
+  /* When the soft keyboard is open, the bottom-nav + FAB are hidden
+   * (via [data-keyboard-open="true"] selectors) so the user can see
+   * the input. While hidden, .app-content collapses to almost no
+   * bottom padding. */
+  --keyboard-reserve: 1rem;
 }
 
 :root {
@@ -124,8 +170,8 @@ button { color: inherit; }
  * content never hides behind the floating bottom-nav / FAB on any
  * platform (PWA in a browser tab, Capacitor Android with gesture
  * inset-bottom, Tauri Windows with a system taskbar). */
-.app-content { width: min(100%, 920px); margin: 0 auto; padding: 1rem 1rem calc(var(--bottom-nav-reserve) + 1.25rem); }
-.app-topbar { height: 3.5rem; padding: max(.8rem,env(safe-area-inset-top)) 1rem 0; display:flex; align-items:center; justify-content:flex-end; gap:.75rem; color:var(--muted-foreground); font-size:.78rem; }
+.app-content { width: min(100%, 920px); margin: 0 auto; padding: 1rem calc(1rem + var(--inset-side)) calc(var(--bottom-nav-reserve) + 1.25rem); }
+.app-topbar { height: 3.75rem; padding: max(.8rem,env(safe-area-inset-top)) calc(1rem + var(--inset-side)) 0; display:flex; align-items:center; justify-content:flex-end; gap:.5rem; color:var(--muted-foreground); font-size:.78rem; }
 .app-topbar>span { display:flex; align-items:center; gap:.35rem; }
 .app-topbar svg { width:1rem; height:1rem; }
 .screen-stack { display:flex; flex-direction:column; gap:1.25rem; animation:screen-in .36s cubic-bezier(.2,.75,.2,1); }
@@ -239,8 +285,8 @@ button { color: inherit; }
 .floating-add { position:fixed; z-index:42; left:50%; bottom:calc(1.8rem + env(safe-area-inset-bottom)); transform:translateX(-50%); width:3.85rem; height:3.85rem; border-radius:9999px; background:var(--stash-accent); color:#032e2a; box-shadow:0 12px 35px rgb(var(--stash-accent-rgb)/.45), inset 0 1px 0 rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center; transition:.28s cubic-bezier(.2,.8,.2,1); border:0; cursor:pointer; }
 .floating-add svg { width:1.75rem; height:1.75rem; }
 .floating-add.is-open { transform:translateX(-50%) rotate(90deg); }
-.bottom-nav { position:fixed; z-index:40; left:1rem; right:1rem; bottom:calc(var(--bottom-nav-offset) + env(safe-area-inset-bottom)); height: var(--bottom-nav-height); display:grid; grid-template-columns:repeat(5,1fr); align-items:center; border:1px solid var(--stash-line); border-radius:2.2rem; background:color-mix(in srgb,var(--background) 78%,transparent); box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(28px) saturate(160%); }
-.bottom-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.25rem; font-size:.68rem; font-weight:500; color:var(--muted-foreground); height:100%; transition:color .15s ease; cursor:pointer; }
+.bottom-nav { position:fixed; z-index:40; left:calc(1rem + var(--inset-side)); right:calc(1rem + var(--inset-side)); bottom:calc(var(--bottom-nav-offset) + env(safe-area-inset-bottom)); height: var(--bottom-nav-height); display:grid; grid-template-columns:repeat(5,1fr); align-items:center; border:1px solid var(--stash-line); border-radius:2.2rem; background:color-mix(in srgb,var(--background) 78%,transparent); box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(28px) saturate(160%); }
+.bottom-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.25rem; font-size:.68rem; font-weight:500; color:var(--muted-foreground); height:100%; min-height: var(--touch-target); transition:color .15s ease; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; white-space:nowrap; }
 .bottom-nav-item.is-active { color:var(--stash-accent); }
 .bottom-nav-item svg { width:1.3rem; height:1.3rem; }
 .bottom-nav-item:first-child { padding-left:.5rem; }
@@ -274,3 +320,103 @@ button { color: inherit; }
   .collection-grid { grid-template-columns:repeat(2,1fr); }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+
+/* ---------------------------------------------------------------------------
+ * iPhone PWA polish
+ *
+ * These rules cover three areas that need mobile-browser-specific handling
+ * and were missing in the original stylesheet:
+ *
+ *   1. Soft-keyboard open. On iOS Safari the visual viewport shrinks when
+ *      the soft keyboard opens; the layout viewport does not. Without help
+ *      the bottom-nav + FAB would be squished under the keyboard. AppShell
+ *      toggles [data-keyboard-open="true"] on the <html> via the
+ *      useKeyboardOpen hook; we then hide the dock + FAB and let the
+ *      content breathe.
+ *
+ *   2. Landscape phones. A 932x430 iPhone Pro Max in landscape has only
+ *      ~375 logical px of vertical space; the 4.8rem bottom-nav eats a
+ *      third of it. We switch to a slimmer dock via the landscape media
+ *      query below.
+ *
+ *   3. Standalone / Add-to-Home-Screen mode. In standalone the URL bar
+ *      is gone but the document still claims the full window.innerHeight.
+ *      That means the radial gradients and splash background already
+ *      cover the right area — but we get a small bonus by slightly
+ *      tightening the topbar (no need for a "below the URL bar" offset).
+ * --------------------------------------------------------------------------- */
+
+/* (1) Soft keyboard — hide the floating dock + FAB and shrink the
+ *     app-content bottom padding so the user can see the input. */
+html[data-keyboard-open='true'] .bottom-nav,
+html[data-keyboard-open='true'] .floating-add,
+html[data-keyboard-open='true'] .fab-menu {
+  /* Hidden + non-interactive so accidental taps don't fire. */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(120%);
+}
+html[data-keyboard-open='true'] .floating-add,
+html[data-keyboard-open='true'] .fab-menu {
+  transform: translate(-50%, 120%);
+}
+html[data-keyboard-open='true'] .app-content {
+  /* When the keyboard is open we no longer need to reserve room for the
+   * bottom-nav; we just need enough room to scroll the focused input
+   * into view. */
+  padding-bottom: var(--keyboard-reserve);
+}
+
+/* (2) Landscape phones — slimmer dock. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .bottom-nav {
+    height: var(--bottom-nav-height-landscape);
+    border-radius: 1.6rem;
+  }
+  .bottom-nav-item { font-size: .62rem; gap: .15rem; }
+  .app-content { padding-bottom: calc(var(--bottom-nav-reserve-landscape) + .5rem); }
+  .floating-add {
+    width: 3.4rem;
+    height: 3.4rem;
+    bottom: calc(1.4rem + env(safe-area-inset-bottom));
+  }
+  .floating-add svg { width: 1.5rem; height: 1.5rem; }
+  /* The home greeting doesn't need to dominate a 375pt-tall landscape. */
+  .home-greeting { font-size: clamp(1.75rem, 5vw, 2.4rem); }
+  .page-header h1, .page-header-title { font-size: clamp(1.4rem, 3.6vw, 1.85rem); }
+}
+
+/* (3) Standalone tweaks. The radial gradient and splash already cover the
+ *     full window, so all we need is to make the topbar sit a little
+ *     higher (no "URL bar offset" illusion). */
+html[data-app-mode='standalone'] .app-topbar,
+html[data-app-mode='native'] .app-topbar {
+  padding-top: env(safe-area-inset-top);
+}
+html[data-app-mode='standalone'] body,
+html[data-app-mode='native'] body {
+  /* Disable rubber-banding overscroll on iOS standalone so the splash
+   * background actually behaves like a real app shell. */
+  overscroll-behavior-y: contain;
+}
+
+/* Touch-target helper. Apply .touch-target to any element that should
+ * meet the Apple HIG 44pt minimum. We pad rather than resize so the
+ * surrounding layout isn't disturbed. */
+.touch-target {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+}
+
+/* Form fields get the same minimum tap target. Inputs themselves don't
+ * need it (they're not buttons), but their labels and trailing buttons do. */
+.field > span + input,
+.field > span + textarea,
+.field > span + select { display: block; }
+
+/* The iOS form sheet in the Capture dialog must respect the safe area on
+ * landscape. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .onboarding-card { max-height: calc(100dvh - 1rem); padding: 1.25rem; }
+  .onboarding-card h1 { font-size: clamp(1.5rem, 4vw, 2rem); }
+}

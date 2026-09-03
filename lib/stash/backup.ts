@@ -98,4 +98,16 @@ export async function importBackup(file: File) {
     await db.collections.bulkPut(payload.collections);
     await db.settings.put(payload.settings);
   });
+
+  // iOS PWA: importing a backup is itself a meaningful write to storage.
+  // Mark this as a first-save so the persistence banner can be hidden on
+  // devices that don't auto-grant. The banner only renders when persisted()
+  // returns false; once it does we re-render and the banner disappears.
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new Event('stash-first-save'));
+    } catch {
+      /* SSR / no window */
+    }
+  }
 }
