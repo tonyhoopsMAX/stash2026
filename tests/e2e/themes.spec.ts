@@ -58,6 +58,8 @@ test('switching a theme in Appearance applies it instantly and marks the card', 
   await openAppReady(page);
   await page.goto('/app?view=settings');
   await page.locator('.app-root').waitFor({ state: 'visible', timeout: 60_000 });
+  await page.getByRole('button', { name: /Theme/ }).last().click();
+  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
 
   // Every theme card renders (registry → gallery wiring; descriptions in the
   // unit suite). Count instead of per-card visibility churn.

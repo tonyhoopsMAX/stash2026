@@ -39,7 +39,7 @@ export default defineConfig({
   // Registry integrity and per-theme token existence are unit-tested
   // (tests/unit/themes.test.ts) — no need to re-derive them per browser.
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /iphone-smoke\.spec\.ts/ },
     {
       name: 'iphone-14-smoke',
       testMatch: 'iphone-smoke.spec.ts',
