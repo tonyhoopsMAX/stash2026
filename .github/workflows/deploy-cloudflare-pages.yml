@@ -86,7 +86,15 @@ jobs:
         id: cf
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: echo "configured=$([ -n \"$TOKEN\" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # NOTE: do not nest \" inside $( ) — the escaped quotes survive as
+          # literal characters and make [ -n ... ] always true.
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy to Cloudflare Pages
         if: steps.cf.outputs.configured == 'true'
