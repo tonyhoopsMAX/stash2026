@@ -38,8 +38,14 @@ export interface StashCollection {
 
 export interface StashSettings {
   id: 'settings';
+  /** Legacy light/dark flag — superseded by `themeId`, kept so older rows
+   *  still parse. The active theme's own `scheme` wins at render time. */
   theme: 'light' | 'dark' | 'system';
+  /** Legacy accent choice, kept for data compatibility. The selected theme
+   *  fully controls the accent since the v1 theme system. */
   accent: 'jade' | 'ocean' | 'orchid' | 'sunset' | 'mono';
+  /** Selected theme from lib/stash/themes.ts (10 launch themes). */
+  themeId: import('./themes').ThemeId;
   onboardingComplete: boolean;
 }
 

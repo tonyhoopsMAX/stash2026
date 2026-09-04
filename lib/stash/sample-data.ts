@@ -241,5 +241,7 @@ export const defaultSettings: StashSettings = {
   id: 'settings',
   theme: 'dark',
   accent: 'jade',
+  // v1 theme system: one of the ten registry ids in lib/stash/themes.ts.
+  themeId: 'og',
   onboardingComplete: false,
 };

@@ -1,16 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<!-- STASH universal app icon: dark vault tile + stacked-layers mark. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="g" x1="60" y1="40" x2="450" y2="480" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#5df4de"/>
-      <stop offset="1" stop-color="#0d988c"/>
+    <linearGradient id="bg" x1="80" y1="24" x2="430" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c2626"/>
+      <stop offset=".55" stop-color="#071516"/>
+      <stop offset="1" stop-color="#040d0e"/>
     </linearGradient>
-    <filter id="s"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#003d38" flood-opacity=".35"/></filter>
+    <linearGradient id="teal" x1="120" y1="120" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#63f0d8"/>
+      <stop offset="1" stop-color="#0fa190"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.32" cy="0.2" r="0.9">
+      <stop stop-color="#25dac5" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#25dac5" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="118" fill="#061112"/>
-  <circle cx="168" cy="142" r="128" fill="#25dac5" opacity=".12"/>
-  <g filter="url(#s)">
-    <path d="M118 164c0-25 20-46 46-46h184c25 0 46 21 46 46v184c0 25-21 46-46 46H164c-26 0-46-21-46-46V164Z" fill="url(#g)"/>
-    <path d="M256 164c9 44 44 79 88 88-44 9-79 44-88 88-9-44-44-79-88-88 44-9 79-44 88-88Z" fill="#eafffc"/>
-    <circle cx="344" cy="164" r="21" fill="#eafffc"/>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <g>
+    <rect x="118" y="316" width="276" height="56" rx="18" fill="#159d8f"/>
+    <rect x="144" y="248" width="224" height="56" rx="18" fill="url(#teal)"/>
+    <rect x="118" y="180" width="276" height="56" rx="18" fill="#8ff7e2"/>
+    <path d="M356 128c7.5 29.5 28.5 50.5 58 58-29.5 7.5-50.5 28.5-58 58-7.5-29.5-28.5-50.5-58-58 29.5-7.5 50.5-28.5 58-58Z" fill="#f2fffc"/>
+    <path d="M136 180a18 18 0 0 1 18-18h60v56h-60a18 18 0 0 1-18-18v-20Z" fill="#d8fff5" opacity=".5"/>
   </g>
 </svg>

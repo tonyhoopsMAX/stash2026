@@ -42,6 +42,11 @@ pnpm install
 
 ## Web / PWA
 
+Production host: **Cloudflare Pages** (root path). See
+[`docs/cloudflare-pages-deploy.md`](./docs/cloudflare-pages-deploy.md) — the
+`dist/public` bundle (`pnpm build:pages`) is what you upload / what CI deploys.
+GitHub Pages is deprecated and its workflow is disabled.
+
 ```bash
 # Development
 pnpm dev                       # http://localhost:3000, app at /app
@@ -54,7 +59,11 @@ pnpm build:web                 # = vinext build --prerender-all
 ```
 
 Offline behaviour is provided by `public/sw.js` (network-first for navigation
-with a cached app-shell fallback; stale-while-revalidate for assets).
+with a cached app-shell fallback; stale-while-revalidate for assets). When a
+new deployment is available the worker goes to *waiting* and the app shows a
+small **“Update available / Refresh now”** pill — nothing swaps silently.
+`/sw.js` is served with `must-revalidate` via `public/_headers` so updates are
+picked up on the next navigation.
 
 ### Verify the PWA
 1. `pnpm build:web`
@@ -88,11 +97,21 @@ pnpm android:release           # = cd android && ./gradlew assembleRelease
 ```
 
 ### App identity
-- applicationId / namespace: `com.stash.app`
+- applicationId / namespace: `com.stash.app` — **never change it**; upgrades
+  over an existing install depend on it.
 - App name / label: `STASH`
+- Update channel: Settings → About → *Check for updates* compares the installed
+  build with the remote `version.json` (URL configured in `lib/stash/config.ts`);
+  `Download update` opens the APK externally so Android can install over the
+  current version (same package id + same signing key ⇒ data stays intact).
+- Release signing is env-driven (`STASH_KEYSTORE_PATH` + password vars in
+  `android/app/build.gradle`); unset keeps the historical unsigned release.
 
 ### Native details
-- Splash: branded STASH splash drawables (dark teal + icon) are pre-generated.
+- Splash + icons: one universal STASH identity for all 10 themes — regenerated
+  from `brand/*.svg` with `pnpm icons:render` (sharp/librsvg). Adaptive icon
+  (foreground + background + monochrome), legacy launchers, and portrait /
+  landscape splash drawables are pre-generated in `android/app/src/main/res`.
 - Launcher icons: branded STASH icons are pre-generated per density.
 - Status bar / safe areas: `@capacitor/status-bar` + CSS `env(safe-area-inset-*)`.
 - Back button: `@capacitor/app` is linked; the shell routes home before exiting.
