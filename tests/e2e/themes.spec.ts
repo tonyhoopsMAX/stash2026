@@ -4,11 +4,11 @@ import { expect, test, type Page } from '@playwright/test';
 //
 // The full per-theme token contract is unit-tested (tests/unit/themes.test.ts
 // asserts all 10 registry entries + CSS blocks); here we prove the *product
-// loop* end-to-end on the production bundle: apply from Appearance → instant
-// re-skin → selection state → persistence across reload, plus layout sanity
-// for a light theme, a dark theme, and a mobile viewport, and the themed
-// dialog/keyboard-safe layer. Each test covers a distinct failure mode — no
-// theme × device × browser matrix.
+// loop* end-to-end on the production bundle: navigate the real UI to the
+// theme browser → apply → instant re-skin → selection state → persistence
+// across reload, plus layout sanity for a light theme, a dark theme, and a
+// mobile viewport, and the themed dialog/keyboard-safe layer. Each test
+// covers a distinct failure mode — no theme × device × browser matrix.
 
 async function openAppReady(page: Page) {
   await page.goto('/app');
@@ -20,14 +20,22 @@ async function openAppReady(page: Page) {
   }
 }
 
-/** Navigate to Appearance and tap a theme card; waits until the applied
- *  attribute (id + variant tokens) is live so later assertions measure the
- *  right theme. `expectedCssAttr` pins the full variant list when relevant. */
-async function applyTheme(page: Page, id: string, expectedCssAttr?: string) {
+/** Walk the actual UI path to the theme browser, at any viewport:
+ *  onboarding done → Settings screen → "Appearance" row → Appearance
+ *  heading visible. (The bottom-nav dock also exposes a Theme entry, but it
+ *  is display:none at desktop widths — the settings row is the one path that
+ *  exists on every breakpoint.) */
+async function openAppearance(page: Page) {
   await page.goto('/app?view=settings');
   await page.locator('.app-root').waitFor({ state: 'visible', timeout: 60_000 });
-  await page.getByRole('button', { name: /Theme/ }).last().click();
+  await page.locator('.app-content .settings-row').filter({ hasText: 'Appearance' }).first().click();
   await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+}
+
+/** Tap a theme card and wait until the applied attribute (id + variant
+ *  tokens) is live, so every later assertion measures the right theme. */
+async function applyTheme(page: Page, id: string, expectedCssAttr?: string) {
+  await openAppearance(page);
   await page.getByTestId(`theme-card-${id}`).click();
   await expect
     .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')), { timeout: 15_000 })
@@ -56,13 +64,10 @@ async function expectCleanLayout(page: Page, label: string) {
 
 test('switching a theme in Appearance applies it instantly and marks the card', async ({ page }) => {
   await openAppReady(page);
-  await page.goto('/app?view=settings');
-  await page.locator('.app-root').waitFor({ state: 'visible', timeout: 60_000 });
-  await page.getByRole('button', { name: /Theme/ }).last().click();
-  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+  await openAppearance(page);
 
-  // Every theme card renders (registry → gallery wiring; descriptions in the
-  // unit suite). Count instead of per-card visibility churn.
+  // Every theme card renders (registry → gallery wiring). Count, not
+  // per-card visibility churn — per-theme tokens are unit-tested.
   await expect(page.getByTestId(/^theme-card-/)).toHaveCount(10);
   await expect(page.getByText(/Raw blocks, thick outlines/).first()).toBeVisible();
 
@@ -94,9 +99,7 @@ test('selected theme persists across a reload via store + pre-paint mirror', asy
   expect(bg.toLowerCase()).toBe('#141d19');
 
   // The gallery reflects the persisted selection after a fresh hydration.
-  await page.goto('/app?view=settings');
-  await page.locator('.app-root').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: /Theme/ }).last().click();
+  await openAppearance(page);
   await expect(page.getByTestId('theme-card-zen-archive')).toHaveClass(/is-selected/);
 });
 
@@ -127,7 +130,7 @@ test('dark theme (Noir Atelier): no overlap across screens', async ({ page }) =>
   }
 });
 
-test.describe('mobile viewport (Pixel 7 + metro-pop): nav docks, nothing overflows', () => {
+test.describe('mobile viewport (Pixel 7 sizing + metro-pop): nav docks, nothing overflows', () => {
   // Chromium project with an explicit mobile viewport — one representative
   // 390–412pt sweep instead of whole-suite device projects.
   test.use({ viewport: { width: 412, height: 915 } });
