@@ -127,20 +127,44 @@ test('every theme is layout-safe on mobile: no horizontal overflow, no heading o
   }
 });
 
-test('flush-bar themes dock the nav at the viewport bottom; pill themes float', async ({ page }) => {
-  await seedTheme(page, 'metro-pop');
+test('flush-bar themes dock the nav at the viewport bottom; tile themes float', async ({ page }) => {
+  // archive-paper uses `variant-nav-bar`: a full-width bar flush to the
+  // bottom edge, unlike the default floating pill dock.
+  await seedTheme(page, 'archive-paper');
   await page.goto('/app');
   await page.locator('.app-root').waitFor({ state: 'visible', timeout: 60_000 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
+    .toContain('variant-nav-bar');
   const flush = await page.evaluate(() => {
     const nav = document.querySelector('.bottom-nav');
     if (!nav) return null;
     const r = nav.getBoundingClientRect();
-    return { bottomGap: Math.round(window.innerHeight - r.bottom), radius: getComputedStyle(nav).borderTopLeftRadius };
+    return {
+      bottomGap: Math.round(window.innerHeight - r.bottom),
+      sideGap: Math.round(r.left),
+      radius: getComputedStyle(nav).borderTopLeftRadius,
+    };
   });
   if (await isMobile(page) && flush) {
     expect(flush.bottomGap).toBeLessThanOrEqual(2);
+    expect(flush.sideGap).toBe(0);
     expect(flush.radius).toBe('0px');
   }
+
+  // metro-pop keeps the nav floating (tile variant) — the offset is real.
+  await seedTheme(page, 'metro-pop');
+  await page.goto('/app');
+  await page.locator('.app-root').waitFor({ state: 'visible', timeout: 60_000 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
+    .toContain('variant-nav-tiles');
+  const floats = await page.evaluate(() => {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return null;
+    return Math.round(window.innerHeight - nav.getBoundingClientRect().bottom);
+  });
+  if (await isMobile(page) && floats !== null) expect(floats).toBeGreaterThan(2);
 });
 
 test('keyboard-safe chrome still works under the brutal theme (capture dialog)', async ({ page }) => {
