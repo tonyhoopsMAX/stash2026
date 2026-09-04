@@ -78,6 +78,11 @@ test('user can finish onboarding by exploring the demo and save a note', async (
 //      so the heading + subtitle stack reads cleanly at 390pt.
 //   4. Touch targets in the topbar are >= 44px tall (Apple HIG).
 test.describe('iPhone PWA polish', () => {
+  // The browser matrix is Chromium-only for these product flows (see
+  // playwright.config.ts), so pin the iPhone viewport here rather than
+  // relying on a separate device project — the measurements below only
+  // make sense at 390pt.
+  test.use({ viewport: { width: 390, height: 844 } });
   test('app fits at iPhone widths without horizontal scroll', async ({ page }) => {
     await openApp(page);
     // Skip onboarding.
