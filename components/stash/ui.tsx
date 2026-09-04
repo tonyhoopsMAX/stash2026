@@ -152,7 +152,7 @@ export function CollectionPill({ collection }: { collection?: StashCollection })
     collection.id === 'study' ? '🎓' : '📁';
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground bg-white/5 border border-white/8">
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground t-fill-strong border t-line">
       <span>{iconSymbol}</span>
       <span>{collection.name}</span>
     </span>
@@ -173,7 +173,7 @@ export function ItemThumbnail({
 
   if (displayUrl) {
     return (
-      <div className={cn('relative shrink-0 overflow-hidden bg-neutral-900 border border-white/10 shadow-sm', dimensionClass)}>
+      <div className={cn('relative shrink-0 overflow-hidden bg-neutral-900 border t-line shadow-sm', dimensionClass)}>
         <img
           src={displayUrl}
           alt={item.title}
@@ -191,7 +191,7 @@ export function ItemThumbnail({
   }
 
   return (
-    <div className={cn('relative shrink-0 flex items-center justify-center border border-white/10 shadow-sm', dimensionClass, 'type-' + item.type)}>
+    <div className={cn('relative shrink-0 flex items-center justify-center border t-line shadow-sm', dimensionClass, 'type-' + item.type)}>
       <ItemTypeIcon type={item.type} size={size === 'sm' ? 15 : 18} />
     </div>
   );
@@ -210,7 +210,7 @@ export function ItemRow({
   return (
     <article
       className={cn(
-        'item-row group transition-colors hover:bg-white/[0.03] px-2',
+        'item-row group transition-colors hover:t-fill px-2',
         compact ? 'min-h-[3.8rem] py-1.5' : 'min-h-[4.75rem] py-2'
       )}
     >
@@ -230,7 +230,7 @@ export function ItemRow({
             <span className="truncate">{formatItemMetadata(item)}</span>
           </div>
         </div>
-        <time className="shrink-0 self-start text-xs text-muted-foreground/80 mt-1">
+        <time className="shrink-0 self-start text-xs t-ink-faint mt-1">
           {formatAge(item.createdAt)}
         </time>
       </button>
@@ -243,8 +243,8 @@ export function ItemRow({
             void toggleItem(item.id, 'favorite');
           }}
           className={cn(
-            'p-1.5 rounded-full hover:bg-white/10 transition-colors focus-ring',
-            item.favorite ? 'text-[var(--stash-accent)]' : 'text-muted-foreground/40 hover:text-muted-foreground'
+            'p-1.5 rounded-full t-fill-hover transition-colors focus-ring',
+            item.favorite ? 'text-[var(--stash-accent)]' : 't-ink-faint hover:text-muted-foreground'
           )}
           aria-label={item.favorite ? 'Unfavorite' : 'Favorite'}
         >
@@ -265,14 +265,14 @@ export function ItemRow({
             render={
               <button
                 type="button"
-                className="icon-button focus-ring w-8 h-8 rounded-full hover:bg-white/10 text-muted-foreground transition-colors"
+                className="icon-button focus-ring w-8 h-8 rounded-full t-fill-hover text-muted-foreground transition-colors"
                 aria-label={'Actions for ' + item.title}
               />
             }
           >
             <MoreHorizontal size={16} />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 bg-[#0c1c1e] border-white/15 backdrop-blur-xl shadow-2xl">
+          <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 stash-menu t-line backdrop-blur-xl shadow-2xl">
             {!item.deletedAt && (
               <DropdownMenuItem onClick={() => toggleItem(item.id, 'pinned')} className="cursor-pointer">
                 <Pin size={15} className="mr-2" />
@@ -328,7 +328,7 @@ export function ItemGridCard({ item }: { item: StashItem }) {
   const displayUrl = useItemMediaUrl(item);
 
   return (
-    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3 transition-all hover:border-[var(--stash-accent)]/40 hover:bg-white/[0.07] hover:shadow-lg">
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border t-line t-fill p-3 transition-all hover:border-[var(--stash-accent)]/40 t-fill-hover hover:shadow-lg">
       <button
         type="button"
         onClick={() => navigate('detail', item.id)}
@@ -347,7 +347,7 @@ export function ItemGridCard({ item }: { item: StashItem }) {
             </span>
           </div>
         ) : (
-          <div className="mb-3 flex h-24 w-full items-center justify-center rounded-xl bg-white/5">
+          <div className="mb-3 flex h-24 w-full items-center justify-center rounded-xl t-fill-strong">
             <ItemTypeIcon type={item.type} size={24} />
           </div>
         )}
@@ -362,7 +362,7 @@ export function ItemGridCard({ item }: { item: StashItem }) {
         </div>
       </button>
 
-      <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+      <div className="mt-2.5 flex items-center justify-between border-t t-line pt-2">
         <button
           type="button"
           onClick={(e) => {
@@ -370,8 +370,8 @@ export function ItemGridCard({ item }: { item: StashItem }) {
             void toggleItem(item.id, 'favorite');
           }}
           className={cn(
-            'p-1 text-xs rounded-full hover:bg-white/10 focus-ring',
-            item.favorite ? 'text-[var(--stash-accent)]' : 'text-muted-foreground/50'
+            'p-1 text-xs rounded-full t-fill-hover focus-ring',
+            item.favorite ? 'text-[var(--stash-accent)]' : 't-ink-faint'
           )}
           aria-label={item.favorite ? 'Unfavorite' : 'Favorite'}
         >

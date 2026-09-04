@@ -1,34 +1,20 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (DEPRECATED — do not use)
 
-# Builds the prerendered static bundle (`pnpm build:public`) and
-# publishes it via the official `actions/deploy-pages` action.
+# ─────────────────────────────────────────────────────────────────────────────
+# DEPRECATED: STASH's production PWA host is Cloudflare Pages
+# (see deploy-cloudflare-pages.yml + docs/cloudflare-pages-deploy.md).
+# GitHub Pages put the app under /stash2026/ which fights the PWA's root
+# scope, icons, and Add-to-Home-Screen behavior.
 #
-# Triggered on every push to `master` (and any `arena/**` working
-# branch) and on manual dispatch. On pull requests, only the build
-# job runs — the actual deploy step is skipped, because GitHub Pages
-# can't accept a deployment from a PR head and the step would 404.
-#
-# The first deployment requires Settings → Pages → Source = "GitHub
-# Actions" in the repo UI; once that is set, this workflow runs
-# hands-off. No secrets are required.
-#
-# The deployed URL is
-#   https://<owner>.github.io/<repo>/
-# with a project-page base of `/<repo>`. Override `PUBLIC_BASE_PATH`
-# via a repo variable for root-hosted user/org sites or custom
-# domains.
+# This workflow is kept ONLY as a disabled reference: it no longer runs on
+# push/PR (triggers removed) and its deploy job is hard-gated off with
+# `if: false`. `pnpm build:public` now defaults to a ROOT-path bundle, so
+# reviving GitHub Pages project hosting would additionally require setting
+# the `PUBLIC_BASE_PATH` repo variable to `/<repo>`.
+# ─────────────────────────────────────────────────────────────────────────────
 
 on:
-  push:
-    branches:
-      - master
-      - main
-      - arena/**
-  pull_request:
-    branches:
-      - master
-      - main
-      - arena/**
+  # DEPRECATED — manual dispatch only. No automatic triggers.
   workflow_dispatch:
 
 # Don't let two deploys race; cancel the in-progress one.
@@ -67,11 +53,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # PUBLIC_BASE_PATH defaults to "/<repo>" so the project page works
-      # out of the box at https://<owner>.github.io/<repo>/. Set this
-      # to "" (empty) in a repo variable to deploy to a user/org site
-      # at https://<owner>.github.io/, or to your custom-domain path
-      # (e.g. "/app") if you point a CNAME at GitHub Pages.
+      # GitHub Pages project sites are served under /<repo>/. The build
+      # script no longer defaults to that (Cloudflare Pages is root-path),
+      # so revive the explicit override here if this flow is ever re-enabled.
       - name: Build public bundle
         env:
           PUBLIC_BASE_PATH: ${{ vars.PUBLIC_BASE_PATH || format('/{0}', github.event.repository.name) }}
@@ -89,12 +73,8 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    # Only deploy on direct pushes to a release branch. Pull requests
-    # build the bundle (so reviewers can see the build is green) but
-    # do NOT trigger the actual deploy — GitHub Pages can't accept a
-    # deployment from a fork / PR head, and the deploy step would
-    # fail with 404 "Failed to create deployment".
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    # HARD DISABLED — Cloudflare Pages is the production host now.
+    if: false
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 10

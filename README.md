@@ -56,19 +56,22 @@ exact commands and toolchain requirements.
     pnpm android:sync && pnpm android:debug   # Android APK (needs Android SDK)
     pnpm tauri:build                          # Windows installer (needs Rust/MSVC)
 
-## Deploy at zero cost
+## Deploy at zero cost — Cloudflare Pages (production)
 
-The current Vinext/Vite build contains a small React Server Components request handler, so deploy it as a Cloudflare Worker rather than a static Pages-only upload. It is eligible for Cloudflare's free Workers tier and requires no database or object-storage service.
+The PWA ships as a **fully static root-path bundle** for Cloudflare Pages free tier. The GitHub Pages flow is deprecated and disabled.
 
-1. Create a free Cloudflare account and install Wrangler if it is not already available: pnpm add -D wrangler.
-2. Authenticate once: pnpm wrangler login.
-3. Build: pnpm build.
-4. Deploy the generated Worker: pnpm wrangler deploy --config dist/server/wrangler.json.
-5. Open the workers.dev URL printed by Wrangler.
+    pnpm build:pages        # → dist/public (all routes prerendered, manifest + sw at root)
 
-No environment variables, migrations, databases, buckets, paid plans, authentication service, or API keys are required.
+Then either let `.github/workflows/deploy-cloudflare-pages.yml` handle it (set the `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` secrets once), or connect the repo in the Pages dashboard with build command `pnpm install --frozen-lockfile && pnpm build:pages` and output directory `dist/public`. Full guide: [`docs/cloudflare-pages-deploy.md`](./docs/cloudflare-pages-deploy.md).
 
-For Cloudflare Pages specifically, a future pure-static export can target dist/client; the current Vinext release does not emit complete route HTML for every page, so uploading only that directory would omit the request handler.
+No environment variables, databases, buckets, or paid plans are required. A Workers deployment (`pnpm build && pnpm wrangler deploy --config dist/server/wrangler.json`) remains available for the SSR variant but is not needed for v1.
+
+## Themes, branding, support & updates
+
+- **10 themes** (OG, Archive Paper, Neo Brutal, Pastel Cloud, Noir Atelier, Aurora Flow, Focused Grid, Zen Archive, Soft Journal, Metro Pop) built as design-token blocks in `app/globals.css` + a registry in `lib/stash/themes.ts`; the Appearance screen is a live-preview theme browser that persists across restarts.
+- One **universal STASH identity** (icon + splash) across Android, PWA, iPhone, and favicon — regenerated with `pnpm icons:render` from the `brand/` vector masters.
+- **Support STASH** (Ko-fi + Share) in Settings/About — external links only, configured in `lib/stash/config.ts`.
+- **Android update check** in Settings/About via a lightweight `version.json`; **PWA** updates surface as an "Update available / Refresh now" prompt. See [`docs/releases-and-updates.md`](./docs/releases-and-updates.md).
 
 ## Architecture
 

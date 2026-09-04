@@ -1,0 +1,12 @@
+<!-- STASH adaptive-icon foreground (108dp canvas; mark inside the 66dp
+     safe zone). Rendered transparent — pairs with ic_launcher_background
+     (#050f10) for the Android adaptive + legacy icon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" fill="none">
+  <g transform="translate(432 432) scale(.68) translate(-432 -432)">
+    <rect x="118" y="316" width="276" height="56" rx="18" fill="#159d8f"/>
+    <rect x="144" y="248" width="224" height="56" rx="18" fill="#33dfc5"/>
+    <rect x="118" y="180" width="276" height="56" rx="18" fill="#8ff7e2"/>
+    <path d="M356 128c7.5 29.5 28.5 50.5 58 58-29.5 7.5-50.5 28.5-58 58-7.5-29.5-28.5-50.5-58-58 29.5-7.5 50.5-28.5 58-58Z" fill="#f2fffc"/>
+    <path d="M136 180a18 18 0 0 1 18-18h60v56h-60a18 18 0 0 1-18-18v-20Z" fill="#d8fff5" opacity=".5"/>
+  </g>
+</svg>

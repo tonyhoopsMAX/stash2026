@@ -1,4 +1,15 @@
-# Deploying the STASH PWA to GitHub Pages
+# Deploying the STASH PWA to GitHub Pages — DEPRECATED
+
+> **⚠️ Deprecated — do not use for production.** STASH's PWA host is now
+> **Cloudflare Pages** (root-path; correct SW scope, manifest icons, and iOS
+> Add-to-Home-Screen behavior). See
+> [`cloudflare-pages-deploy.md`](./cloudflare-pages-deploy.md).
+> The `deploy-pages.yml` workflow is disabled (manual dispatch only, deploy
+> job hard-gated off). This document is kept for historical reference; the
+> `/stash2026/` sub-path it describes conflicts with the PWA's root scope.
+
+---
+
 
 STASH ships as a **static PWA bundle** that can be hosted on any free
 HTTPS host. The recommended target is **GitHub Pages**: every push to

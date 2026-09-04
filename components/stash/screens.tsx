@@ -11,13 +11,17 @@ import {
   ChevronRight,
   CircleHelp,
   Clock,
+  Coffee,
   Download,
   ExternalLink,
+  Image as ImageIcon,
+  RefreshCw,
   File,
   FileArchive,
   FileText,
   FolderPlus,
   Grid,
+  Home,
   Heart,
   Info,
   Laptop,
@@ -25,7 +29,6 @@ import {
   Lightbulb,
   Link2,
   List,
-  Moon,
   MoreHorizontal,
   Palette,
   Pin,
@@ -36,16 +39,22 @@ import {
   SlidersHorizontal,
   Sparkles,
   Star,
-  Sun,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Switch } from '@/components/ui/switch';
 import { exportBackup, importBackup } from '@/lib/stash/backup';
-import { pickFile } from '@/lib/stash/platform';
+import { STASH_CONFIG, resolveShareUrl } from '@/lib/stash/config';
+import { openExternal, pickFile, platform, shareItem } from '@/lib/stash/platform';
+import {
+  bundledVersionLabel,
+  checkForAndroidUpdate,
+  readInstalledBuild,
+  type UpdateCheckResult,
+} from '@/lib/stash/updates';
+import { STASH_THEMES, type StashTheme } from '@/lib/stash/themes';
 import { rankForResurface } from '@/lib/stash/resurface';
 import { searchItems } from '@/lib/stash/search';
 import { useStashStore } from '@/lib/stash/store';
@@ -69,7 +78,7 @@ export function PageHeader({
         {back && (
           <button
             onClick={back}
-            className="icon-button focus-ring shrink-0 w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center hover:bg-white/10"
+            className="icon-button focus-ring shrink-0 w-10 h-10 rounded-full border t-line t-fill-strong flex items-center justify-center t-fill-hover"
             aria-label="Go back"
           >
             <ArrowLeft size={18} />
@@ -98,7 +107,7 @@ function ResurfaceCard({ item, onClick }: { item: StashItem; onClick: () => void
   return (
     <button
       onClick={onClick}
-      className="relative flex flex-col justify-between shrink-0 w-52 h-64 snap-start overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#0d1f21] p-4 text-left transition-transform hover:scale-[1.02] focus-ring shadow-lg"
+      className="relative flex flex-col justify-between shrink-0 w-52 h-64 snap-start overflow-hidden rounded-[1.75rem] border t-line t-fill-strong p-4 text-left transition-transform hover:scale-[1.02] focus-ring shadow-lg"
     >
       {mediaUrl ? (
         <>
@@ -114,7 +123,7 @@ function ResurfaceCard({ item, onClick }: { item: StashItem; onClick: () => void
       )}
 
       <div className="relative z-10 flex items-center justify-between w-full">
-        <span className="rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white/90">
+        <span className="rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium t-ink-soft">
           {formatAge(item.createdAt)}
         </span>
         {item.favorite && <Star size={14} className="fill-[var(--stash-accent)] text-[var(--stash-accent)]" />}
@@ -125,7 +134,7 @@ function ResurfaceCard({ item, onClick }: { item: StashItem; onClick: () => void
           {item.title}
         </strong>
         {item.description && (
-          <p className="mt-1 text-xs text-white/70 line-clamp-2">
+          <p className="mt-1 text-xs t-ink-soft line-clamp-2">
             {item.description}
           </p>
         )}
@@ -168,7 +177,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
       </div>
 
       {/* Quick Capture Card (Stash 3) */}
-      <Surface className="capture-card rounded-[2rem] border border-white/15 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-xl">
+      <Surface className="capture-card rounded-[2rem] border t-line t-fill p-5 backdrop-blur-2xl shadow-xl">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 min-w-0">
             <span className="capture-spark flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--stash-accent)]/15 text-[var(--stash-accent)] border border-[var(--stash-accent)]/30">
@@ -181,19 +190,19 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
           </div>
           <button
             onClick={() => onCapture('screenshot')}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--stash-accent)] text-[#032e2a] shadow-lg shadow-[var(--stash-accent)]/30 hover:scale-105 active:scale-95 transition-transform focus-ring font-medium text-2xl"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--stash-accent)] text-[var(--t-accent-ink)] shadow-lg shadow-[var(--stash-accent)]/30 hover:scale-105 active:scale-95 transition-transform focus-ring font-medium text-2xl"
             aria-label="Add item"
           >
             +
           </button>
         </div>
 
-        <div className="quick-grid grid grid-cols-5 gap-2 mt-4 pt-3 border-t border-white/8">
+        <div className="quick-grid grid grid-cols-5 gap-2 mt-4 pt-3 border-t t-line">
           {quickTypes.map(({ type, label, icon: Icon }) => (
             <button
               key={type}
               onClick={() => onCapture(type)}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] py-2 px-1 text-xs text-muted-foreground transition-all hover:bg-white/[0.08] hover:text-foreground focus-ring"
+              className="flex flex-col items-center justify-center gap-1.5 rounded-xl border t-line t-fill py-2 px-1 text-xs text-muted-foreground transition-all t-fill-hover hover:text-foreground focus-ring"
             >
               <Icon size={17} className="text-[var(--stash-accent)]" />
               <span className="text-[11px] truncate w-full text-center">{label}</span>
@@ -227,9 +236,9 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
                   setTypeFilter(stat.filter);
                   navigate('inbox');
                 }}
-                className="flex flex-col items-start justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all hover:bg-white/[0.07] hover:border-white/20 focus-ring"
+                className="flex flex-col items-start justify-between rounded-2xl border t-line t-fill p-4 text-left transition-all t-fill-hover focus-ring"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)] mb-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)] mb-3">
                   <Icon size={18} />
                 </span>
                 <strong className="text-2xl font-bold text-foreground">{stat.count}</strong>
@@ -255,7 +264,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
         <button
           type="button"
           onClick={() => setReviewModalOpen(true)}
-          className="w-full flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition-all hover:bg-white/[0.07] hover:border-white/20 focus-ring text-left"
+          className="w-full flex items-center justify-between rounded-2xl border t-line t-fill p-4 transition-all t-fill-hover focus-ring text-left"
         >
           <div className="flex items-center gap-3.5">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30">
@@ -319,7 +328,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
               <button
                 key={collection.id}
                 onClick={() => navigate('collection', collection.id)}
-                className="flex items-center gap-3 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition-all hover:bg-white/[0.08] hover:border-white/20 focus-ring min-w-[11rem]"
+                className="flex items-center gap-3 shrink-0 rounded-2xl border t-line t-fill px-4 py-3 text-left transition-all t-fill-hover focus-ring min-w-[11rem]"
               >
                 <span
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
@@ -352,7 +361,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
           </button>
         </div>
 
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] divide-y divide-white/5 overflow-hidden">
+        <Surface className="rounded-2xl border t-line t-fill divide-y divide-[color:var(--t-line-soft)] overflow-hidden">
           {active
             .slice()
             .sort((a, b) => b.createdAt - a.createdAt)
@@ -365,7 +374,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
 
       {/* Remember Today Review Modal */}
       <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-lg text-foreground">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-lg text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/20 text-teal-300">
@@ -387,9 +396,9 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
                   setReviewModalOpen(false);
                   navigate('detail', item.id);
                 }}
-                className="w-full text-left flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 cursor-pointer hover:bg-white/[0.07] transition-colors"
+                className="w-full text-left flex items-center gap-3 rounded-xl border t-line t-fill p-3 cursor-pointer t-fill-hover transition-colors"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/5 text-xs text-muted-foreground font-mono">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full t-fill-strong text-xs text-muted-foreground font-mono">
                   {idx + 1}
                 </span>
                 <ItemThumbnail item={item} size="sm" />
@@ -405,7 +414,7 @@ export function HomeScreen({ onCapture }: { onCapture: (type: StashItemType) => 
           <div className="mt-5 flex gap-2">
             <button
               onClick={() => setReviewModalOpen(false)}
-              className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-sm font-semibold text-[#032e2a] hover:brightness-105"
+              className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-sm font-semibold text-[var(--t-accent-ink)] hover:brightness-105"
             >
               Completed for Today
             </button>
@@ -486,7 +495,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
 
       {/* Search Input Bar (Stash 1 & Stash 4) */}
       {(mode === 'search' || mode === 'inbox') && (
-        <div className="search-box relative flex items-center rounded-2xl border border-white/15 bg-white/[0.04] px-4 py-3 backdrop-blur-xl shadow-inner">
+        <div className="search-box relative flex items-center rounded-2xl border t-line t-fill px-4 py-3 backdrop-blur-xl shadow-inner">
           <Search size={19} className="text-muted-foreground shrink-0 mr-3" />
           <input
             aria-label="Search items"
@@ -536,8 +545,8 @@ export function ListScreen({ mode }: { mode: ListMode }) {
               className={cn(
                 'rounded-full px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all focus-ring',
                 typeFilter === filter.id
-                  ? 'bg-[var(--stash-accent)] text-[#032e2a] shadow-md'
-                  : 'bg-white/[0.04] text-muted-foreground border border-white/10 hover:bg-white/[0.08] hover:text-foreground'
+                  ? 'bg-[var(--stash-accent)] text-[var(--t-accent-ink)] shadow-md'
+                  : 't-fill text-muted-foreground border t-line t-fill-hover hover:text-foreground'
               )}
             >
               {filter.label}
@@ -570,7 +579,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
                       setQuery(term);
                       addRecentSearch(term);
                     }}
-                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-muted-foreground hover:bg-white/[0.08] hover:text-foreground focus-ring"
+                    className="flex items-center gap-1.5 rounded-full border t-line t-fill px-3 py-1.5 text-xs text-muted-foreground t-fill-hover hover:text-foreground focus-ring"
                   >
                     <Clock size={13} className="text-muted-foreground/70" />
                     <span>{term}</span>
@@ -603,14 +612,14 @@ export function ListScreen({ mode }: { mode: ListMode }) {
                       'flex items-center justify-between rounded-xl border p-3 text-left transition-all focus-ring',
                       typeFilter === sf.type
                         ? 'border-[var(--stash-accent)] bg-[var(--stash-accent)]/15 text-[var(--stash-accent)]'
-                        : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-foreground'
+                        : 't-line t-fill t-fill-hover text-foreground'
                     )}
                   >
                     <div className="flex items-center gap-2">
                       <Icon size={16} className="text-[var(--stash-accent)]" />
                       <span className="text-xs font-medium">{sf.label}</span>
                     </div>
-                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground">
+                    <span className="rounded-md t-fill-hover px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground">
                       {sf.count}
                     </span>
                   </button>
@@ -622,7 +631,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
       )}
 
       {/* Meta Bar: Count, Sort dropdown & Grid/List Toggle (Stash 1 & Stash 4) */}
-      <div className="list-meta flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-white/5">
+      <div className="list-meta flex items-center justify-between text-xs text-muted-foreground pt-1 border-t t-line">
         <span className="font-medium text-foreground/80">{visible.length} items</span>
 
         <div className="flex items-center gap-3">
@@ -633,24 +642,24 @@ export function ListScreen({ mode }: { mode: ListMode }) {
               onChange={(e) => setSort(e.target.value as typeof sort)}
               className="bg-transparent text-[var(--stash-accent)] font-medium focus:outline-none cursor-pointer"
             >
-              <option value="newest" className="bg-[#0c1c1e] text-white">Newest first</option>
-              <option value="oldest" className="bg-[#0c1c1e] text-white">Oldest first</option>
-              <option value="title" className="bg-[#0c1c1e] text-white">Best match</option>
+              <option value="newest" className="stash-menu text-white">Newest first</option>
+              <option value="oldest" className="stash-menu text-white">Oldest first</option>
+              <option value="title" className="stash-menu text-white">Best match</option>
             </select>
           </label>
 
           {mode === 'inbox' && (
-            <div className="flex items-center border border-white/10 rounded-lg p-0.5 bg-white/[0.02]">
+            <div className="flex items-center border t-line rounded-lg p-0.5 t-fill">
               <button
                 onClick={() => setLayoutMode('list')}
-                className={cn('p-1 rounded', layoutMode === 'list' ? 'bg-white/10 text-white' : 'text-muted-foreground')}
+                className={cn('p-1 rounded', layoutMode === 'list' ? 't-fill-hover text-white' : 'text-muted-foreground')}
                 aria-label="List layout"
               >
                 <List size={14} />
               </button>
               <button
                 onClick={() => setLayoutMode('grid')}
-                className={cn('p-1 rounded', layoutMode === 'grid' ? 'bg-white/10 text-white' : 'text-muted-foreground')}
+                className={cn('p-1 rounded', layoutMode === 'grid' ? 't-fill-hover text-white' : 'text-muted-foreground')}
                 aria-label="Grid layout"
               >
                 <Grid size={14} />
@@ -669,7 +678,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
             ))}
           </div>
         ) : (
-          <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] divide-y divide-white/5 overflow-hidden">
+          <Surface className="rounded-2xl border t-line t-fill divide-y divide-[color:var(--t-line-soft)] overflow-hidden">
             {visible.map((item) => (
               <ItemRow item={item} key={item.id} />
             ))}
@@ -698,7 +707,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
 
       {/* Filter Drawer Dialog */}
       <Dialog open={filterDrawerOpen} onOpenChange={setFilterDrawerOpen}>
-        <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+        <DialogContent className="rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <SlidersHorizontal size={18} className="text-[var(--stash-accent)]" />
@@ -720,7 +729,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
                       'rounded-xl border p-2 text-xs font-medium capitalize focus-ring',
                       typeFilter === t
                         ? 'border-[var(--stash-accent)] bg-[var(--stash-accent)]/15 text-[var(--stash-accent)]'
-                        : 'border-white/10 bg-white/5 text-muted-foreground'
+                        : 't-line t-fill-strong text-muted-foreground'
                     )}
                   >
                     {t === 'all' ? 'All types' : t}
@@ -746,7 +755,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
                       'rounded-xl border p-2 text-xs font-medium focus-ring',
                       sort === s.id
                         ? 'border-[var(--stash-accent)] bg-[var(--stash-accent)]/15 text-[var(--stash-accent)]'
-                        : 'border-white/10 bg-white/5 text-muted-foreground'
+                        : 't-line t-fill-strong text-muted-foreground'
                     )}
                   >
                     {s.label}
@@ -758,7 +767,7 @@ export function ListScreen({ mode }: { mode: ListMode }) {
 
           <button
             onClick={() => setFilterDrawerOpen(false)}
-            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-sm font-semibold text-[#032e2a]"
+            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-sm font-semibold text-[var(--t-accent-ink)]"
           >
             Apply Filters
           </button>
@@ -784,7 +793,7 @@ export function CollectionsScreen() {
       <PageHeader eyebrow="ORGANIZE" title="Collections" />
       <p className="page-subtitle">Loose enough for capture. Structured when it helps.</p>
 
-      <form className="new-collection flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] p-2" onSubmit={submit}>
+      <form className="new-collection flex items-center gap-2 rounded-2xl border t-line t-fill p-2" onSubmit={submit}>
         <FolderPlus size={18} className="ml-2 text-[var(--stash-accent)] shrink-0" />
         <input
           aria-label="New collection name"
@@ -793,7 +802,7 @@ export function CollectionsScreen() {
           placeholder="Create a new collection…"
           className="w-full bg-transparent px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
-        <button type="submit" className="rounded-full bg-[var(--stash-accent)] px-4 py-2 text-xs font-semibold text-[#032e2a] shrink-0 focus-ring">
+        <button type="submit" className="rounded-full bg-[var(--stash-accent)] px-4 py-2 text-xs font-semibold text-[var(--t-accent-ink)] shrink-0 focus-ring">
           Create
         </button>
       </form>
@@ -811,7 +820,7 @@ export function CollectionsScreen() {
             <button
               key={collection.id}
               onClick={() => navigate('collection', collection.id)}
-              className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition-all hover:bg-white/[0.08] hover:border-white/20 focus-ring"
+              className="flex items-center justify-between rounded-2xl border t-line t-fill p-4 text-left transition-all t-fill-hover focus-ring"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span
@@ -850,7 +859,7 @@ export function CollectionScreen({ id }: { id?: string }) {
       <p className="page-subtitle">{visible.length} saved items</p>
 
       {visible.length ? (
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] divide-y divide-white/5 overflow-hidden">
+        <Surface className="rounded-2xl border t-line t-fill divide-y divide-[color:var(--t-line-soft)] overflow-hidden">
           {visible.map((item) => (
             <ItemRow item={item} key={item.id} />
           ))}
@@ -920,7 +929,7 @@ export function DetailScreen({ id }: { id?: string }) {
       <div className="flex items-center justify-between pt-1">
         <button
           onClick={() => navigate('inbox')}
-          className="icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
+          className="icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border t-line t-fill-strong t-fill-hover"
           aria-label="Back to inbox"
         >
           <ArrowLeft size={18} />
@@ -933,7 +942,7 @@ export function DetailScreen({ id }: { id?: string }) {
               'icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border transition-all',
               item.pinned
                 ? 'border-[var(--stash-accent)] bg-[var(--stash-accent)]/20 text-[var(--stash-accent)]'
-                : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10'
+                : 't-line t-fill-strong text-muted-foreground t-fill-hover'
             )}
             title="Pin item"
             aria-label="Pin item"
@@ -947,7 +956,7 @@ export function DetailScreen({ id }: { id?: string }) {
               'icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border transition-all',
               item.favorite
                 ? 'border-[var(--stash-accent)] bg-[var(--stash-accent)]/20 text-[var(--stash-accent)]'
-                : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10'
+                : 't-line t-fill-strong text-muted-foreground t-fill-hover'
             )}
             title="Favorite item"
             aria-label="Favorite item"
@@ -957,7 +966,7 @@ export function DetailScreen({ id }: { id?: string }) {
 
           <button
             onClick={() => archiveItem(item.id)}
-            className="icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
+            className="icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border t-line t-fill-strong text-muted-foreground t-fill-hover"
             title="Archive item"
             aria-label="Archive item"
           >
@@ -968,14 +977,14 @@ export function DetailScreen({ id }: { id?: string }) {
             <DropdownMenuTrigger
               render={
                 <button
-                  className="icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
+                  className="icon-button focus-ring flex h-10 w-10 items-center justify-center rounded-full border t-line t-fill-strong text-muted-foreground t-fill-hover"
                   aria-label="More options"
                 />
               }
             >
               <MoreHorizontal size={17} />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 bg-[#0c1c1e] border-white/15 backdrop-blur-xl">
+            <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 stash-menu t-line backdrop-blur-xl">
               <DropdownMenuItem
                 onClick={() => {
                   if (item.url) void navigator.clipboard.writeText(item.url);
@@ -999,7 +1008,7 @@ export function DetailScreen({ id }: { id?: string }) {
       </div>
 
       {/* Hero Media Card (Stash 5) */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-neutral-900 shadow-2xl">
+      <div className="relative overflow-hidden rounded-[2rem] border t-line bg-neutral-900 shadow-2xl">
         {mediaUrl ? (
           <div className="relative h-64 sm:h-80 w-full overflow-hidden">
             <img src={mediaUrl} alt={item.title} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
@@ -1032,7 +1041,7 @@ export function DetailScreen({ id }: { id?: string }) {
             href={item.url}
             target="_blank"
             rel="noreferrer"
-            className="absolute bottom-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--stash-accent)] text-[#032e2a] shadow-lg hover:scale-105 transition-transform"
+            className="absolute bottom-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--stash-accent)] text-[var(--t-accent-ink)] shadow-lg hover:scale-105 transition-transform"
             aria-label="Open link in new tab"
           >
             <ExternalLink size={17} />
@@ -1065,7 +1074,7 @@ export function DetailScreen({ id }: { id?: string }) {
       )}
 
       {/* Notes Card with Inline Editing (Stash 5) */}
-      <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+      <Surface className="rounded-2xl border t-line t-fill p-4 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold tracking-tight text-foreground uppercase tracking-wider">Notes</h2>
           {!isEditingNotes ? (
@@ -1098,7 +1107,7 @@ export function DetailScreen({ id }: { id?: string }) {
             rows={4}
             value={notesText}
             onChange={(e) => setNotesText(e.target.value)}
-            className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+            className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
             placeholder="Write your notes here…"
           />
         ) : (
@@ -1115,7 +1124,7 @@ export function DetailScreen({ id }: { id?: string }) {
           {item.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-muted-foreground"
+              className="rounded-full border t-line t-fill-strong px-3 py-1 text-xs font-medium text-muted-foreground"
             >
               #{tag}
             </span>
@@ -1132,7 +1141,7 @@ export function DetailScreen({ id }: { id?: string }) {
               />
               <button
                 onClick={handleAddTag}
-                className="rounded-full bg-[var(--stash-accent)] px-2 py-1 text-[11px] font-bold text-[#032e2a]"
+                className="rounded-full bg-[var(--stash-accent)] px-2 py-1 text-[11px] font-bold text-[var(--t-accent-ink)]"
               >
                 Add
               </button>
@@ -1146,7 +1155,7 @@ export function DetailScreen({ id }: { id?: string }) {
           ) : (
             <button
               onClick={() => setIsAddingTag(true)}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-white/5 text-muted-foreground hover:text-foreground focus-ring"
+              className="flex h-7 w-7 items-center justify-center rounded-full border t-line t-fill-strong text-muted-foreground hover:text-foreground focus-ring"
               aria-label="Add tag"
             >
               <Plus size={14} />
@@ -1161,7 +1170,7 @@ export function DetailScreen({ id }: { id?: string }) {
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Collection</h2>
           <button
             onClick={() => navigate('collection', collection.id)}
-            className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left hover:bg-white/[0.06] transition-colors focus-ring"
+            className="flex w-full items-center justify-between rounded-2xl border t-line t-fill p-3 text-left t-fill-hover transition-colors focus-ring"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300">
@@ -1180,7 +1189,7 @@ export function DetailScreen({ id }: { id?: string }) {
       {/* Reminder Card (Stash 5) */}
       <section>
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Reminder</h2>
-        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="flex items-center justify-between rounded-2xl border t-line t-fill p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300">
               <Bell size={18} />
@@ -1206,7 +1215,7 @@ export function DetailScreen({ id }: { id?: string }) {
       </section>
 
       {/* Metadata Card (Stash 5) */}
-      <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-xs">
+      <div className="grid grid-cols-2 gap-3 rounded-2xl border t-line t-fill p-4 text-xs">
         <div>
           <span className="text-muted-foreground block mb-1">Created</span>
           <p className="font-semibold text-foreground">
@@ -1237,14 +1246,14 @@ export function DetailScreen({ id }: { id?: string }) {
             href={item.url}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 rounded-full bg-[var(--stash-accent)] py-3 text-sm font-bold text-[#032e2a] shadow-lg shadow-[var(--stash-accent)]/20 hover:brightness-105 transition-all focus-ring"
+            className="flex-1 flex items-center justify-center gap-2 rounded-full bg-[var(--stash-accent)] py-3 text-sm font-bold text-[var(--t-accent-ink)] shadow-lg shadow-[var(--stash-accent)]/20 hover:brightness-105 transition-all focus-ring"
           >
             Open Link <ExternalLink size={16} />
           </a>
         ) : (
           <button
             onClick={() => navigate('edit', item.id)}
-            className="flex-1 rounded-full bg-[var(--stash-accent)] py-3 text-sm font-bold text-[#032e2a] shadow-lg shadow-[var(--stash-accent)]/20 hover:brightness-105 transition-all focus-ring"
+            className="flex-1 rounded-full bg-[var(--stash-accent)] py-3 text-sm font-bold text-[var(--t-accent-ink)] shadow-lg shadow-[var(--stash-accent)]/20 hover:brightness-105 transition-all focus-ring"
           >
             Edit Item
           </button>
@@ -1252,7 +1261,7 @@ export function DetailScreen({ id }: { id?: string }) {
 
         <button
           onClick={() => navigate('edit', item.id)}
-          className="flex h-12 px-5 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 text-sm font-semibold text-foreground hover:bg-white/10 transition-colors focus-ring"
+          className="flex h-12 px-5 items-center justify-center gap-1.5 rounded-full border t-line t-fill-strong text-sm font-semibold text-foreground t-fill-hover transition-colors focus-ring"
         >
           Edit
         </button>
@@ -1260,7 +1269,7 @@ export function DetailScreen({ id }: { id?: string }) {
 
       {/* Reminder Picker Dialog */}
       <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
-        <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+        <DialogContent className="rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Bell size={18} className="text-[var(--stash-accent)]" />
@@ -1277,7 +1286,7 @@ export function DetailScreen({ id }: { id?: string }) {
                 type="datetime-local"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+                className="w-full rounded-xl border t-line t-fill-strong px-3 py-2 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
               />
             </label>
 
@@ -1289,7 +1298,7 @@ export function DetailScreen({ id }: { id?: string }) {
                   tomorrow.setHours(9, 0, 0, 0);
                   setReminderDate(new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
                 }}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                className="rounded-lg border t-line t-fill-strong px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 Tomorrow 9 AM
               </button>
@@ -1300,7 +1309,7 @@ export function DetailScreen({ id }: { id?: string }) {
                   nextWeek.setHours(9, 0, 0, 0);
                   setReminderDate(new Date(nextWeek.getTime() - nextWeek.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
                 }}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                className="rounded-lg border t-line t-fill-strong px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 Next week
               </button>
@@ -1321,7 +1330,7 @@ export function DetailScreen({ id }: { id?: string }) {
             )}
             <button
               onClick={handleSaveReminder}
-              className="flex-1 rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
+              className="flex-1 rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[var(--t-accent-ink)]"
             >
               Save Reminder
             </button>
@@ -1379,7 +1388,7 @@ export function EditScreen({ id }: { id?: string }) {
           <input
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+            className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
           />
         </label>
 
@@ -1389,7 +1398,7 @@ export function EditScreen({ id }: { id?: string }) {
             rows={3}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+            className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
           />
         </label>
 
@@ -1399,7 +1408,7 @@ export function EditScreen({ id }: { id?: string }) {
             rows={5}
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+            className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
           />
         </label>
 
@@ -1409,7 +1418,7 @@ export function EditScreen({ id }: { id?: string }) {
             type="url"
             value={form.url}
             onChange={(e) => setForm({ ...form, url: e.target.value })}
-            className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+            className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
           />
         </label>
 
@@ -1419,7 +1428,7 @@ export function EditScreen({ id }: { id?: string }) {
             <input
               value={form.tags}
               onChange={(e) => setForm({ ...form, tags: e.target.value })}
-              className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+              className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
             />
           </label>
 
@@ -1428,7 +1437,7 @@ export function EditScreen({ id }: { id?: string }) {
             <select
               value={form.collectionId}
               onChange={(e) => setForm({ ...form, collectionId: e.target.value })}
-              className="w-full rounded-xl border border-white/15 bg-[#0a1819] p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+              className="w-full rounded-xl border t-line bg-[#0a1819] p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
             >
               <option value="">Inbox</option>
               {collections.map((c) => (
@@ -1446,11 +1455,11 @@ export function EditScreen({ id }: { id?: string }) {
             type="datetime-local"
             value={form.reminder}
             onChange={(e) => setForm({ ...form, reminder: e.target.value })}
-            className="w-full rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
+            className="w-full rounded-xl border t-line t-fill-strong p-3 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none"
           />
         </label>
 
-        <button type="submit" className="w-full rounded-full bg-[var(--stash-accent)] py-3 font-semibold text-[#032e2a] focus-ring">
+        <button type="submit" className="w-full rounded-full bg-[var(--stash-accent)] py-3 font-semibold text-[var(--t-accent-ink)] focus-ring">
           Save changes
         </button>
       </form>
@@ -1469,7 +1478,7 @@ export function SettingsScreen() {
       <p className="page-subtitle">Customize your experience.</p>
 
       {/* Local-First / Privacy Hero Banner (Stash 6) */}
-      <Surface className="rounded-[2rem] border border-white/15 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-xl overflow-hidden relative">
+      <Surface className="rounded-[2rem] border t-line t-fill p-5 backdrop-blur-2xl shadow-xl overflow-hidden relative">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-[var(--stash-accent)] mb-2">
@@ -1490,7 +1499,7 @@ export function SettingsScreen() {
           </div>
 
           <div className="shrink-0 w-24 h-24 hidden sm:block">
-            <img src="/assets/safe_vault.jpg" alt="Local-only vault" className="w-full h-full object-cover rounded-2xl border border-white/10" />
+            <img src="/assets/safe_vault.jpg" alt="Local-only vault" className="w-full h-full object-cover rounded-2xl border t-line" />
           </div>
         </div>
       </Surface>
@@ -1498,10 +1507,10 @@ export function SettingsScreen() {
       {/* Preferences Section */}
       <section>
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Preferences</h2>
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] divide-y divide-white/5 overflow-hidden">
-          <button onClick={() => navigate('appearance')} className="settings-row w-full flex items-center justify-between p-4 hover:bg-white/[0.05] transition-colors text-left focus-ring">
+        <Surface className="rounded-2xl border t-line t-fill divide-y divide-[color:var(--t-line-soft)] overflow-hidden">
+          <button onClick={() => navigate('appearance')} className="settings-row w-full flex items-center justify-between p-4 hover:t-fill transition-colors text-left focus-ring">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
                 <Palette size={18} />
               </span>
               <div>
@@ -1512,9 +1521,9 @@ export function SettingsScreen() {
             <ChevronRight size={18} className="text-muted-foreground" />
           </button>
 
-          <button onClick={() => navigate('backup')} className="settings-row w-full flex items-center justify-between p-4 hover:bg-white/[0.05] transition-colors text-left focus-ring">
+          <button onClick={() => navigate('backup')} className="settings-row w-full flex items-center justify-between p-4 hover:t-fill transition-colors text-left focus-ring">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
                 <FileArchive size={18} />
               </span>
               <div>
@@ -1525,9 +1534,9 @@ export function SettingsScreen() {
             <ChevronRight size={18} className="text-muted-foreground" />
           </button>
 
-          <button onClick={() => navigate('reminders')} className="settings-row w-full flex items-center justify-between p-4 hover:bg-white/[0.05] transition-colors text-left focus-ring">
+          <button onClick={() => navigate('reminders')} className="settings-row w-full flex items-center justify-between p-4 hover:t-fill transition-colors text-left focus-ring">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
                 <Bell size={18} />
               </span>
               <div>
@@ -1538,9 +1547,9 @@ export function SettingsScreen() {
             <ChevronRight size={18} className="text-muted-foreground" />
           </button>
 
-          <button onClick={() => navigate('install')} className="settings-row w-full flex items-center justify-between p-4 hover:bg-white/[0.05] transition-colors text-left focus-ring">
+          <button onClick={() => navigate('install')} className="settings-row w-full flex items-center justify-between p-4 hover:t-fill transition-colors text-left focus-ring">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
                 <Laptop size={18} />
               </span>
               <div>
@@ -1551,14 +1560,14 @@ export function SettingsScreen() {
             <ChevronRight size={18} className="text-muted-foreground" />
           </button>
 
-          <button onClick={() => navigate('about')} className="settings-row w-full flex items-center justify-between p-4 hover:bg-white/[0.05] transition-colors text-left focus-ring">
+          <button onClick={() => navigate('about')} className="settings-row w-full flex items-center justify-between p-4 hover:t-fill transition-colors text-left focus-ring">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
                 <Info size={18} />
               </span>
               <div>
                 <strong className="block text-sm font-semibold text-foreground">About STASH</strong>
-                <small className="text-xs text-muted-foreground">Version 1.0.0 • What’s new</small>
+                <small className="text-xs text-muted-foreground">Version {STASH_CONFIG.app.version.name} • Support • Updates</small>
               </div>
             </div>
             <ChevronRight size={18} className="text-muted-foreground" />
@@ -1566,11 +1575,14 @@ export function SettingsScreen() {
         </Surface>
       </section>
 
+      {/* Support STASH — external links only, no in-app payments. */}
+      <SupportSection />
+
       {/* Reset Sample Data Button */}
       <div className="pt-2">
         <button
           onClick={() => setResetConfirmOpen(true)}
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.02] p-3 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+          className="w-full rounded-2xl border t-line t-fill p-3 text-xs font-semibold text-muted-foreground hover:text-foreground hover:t-fill-strong transition-colors"
         >
           Restore Original Sample Data
         </button>
@@ -1578,7 +1590,7 @@ export function SettingsScreen() {
 
       {/* Privacy Explanation Modal */}
       <Dialog open={privacyModalOpen} onOpenChange={setPrivacyModalOpen}>
-        <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+        <DialogContent className="rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <ShieldCheck size={20} className="text-[var(--stash-accent)]" />
@@ -1598,7 +1610,7 @@ export function SettingsScreen() {
           </div>
           <button
             onClick={() => setPrivacyModalOpen(false)}
-            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
+            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[var(--t-accent-ink)]"
           >
             Understood
           </button>
@@ -1607,7 +1619,7 @@ export function SettingsScreen() {
 
       {/* Reset Sample Confirmation Modal */}
       <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
-        <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+        <DialogContent className="rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Restore Sample Content?</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
@@ -1617,7 +1629,7 @@ export function SettingsScreen() {
           <div className="flex gap-2 mt-4">
             <button
               onClick={() => setResetConfirmOpen(false)}
-              className="flex-1 rounded-full border border-white/15 bg-white/5 py-2.5 text-xs font-semibold text-foreground"
+              className="flex-1 rounded-full border t-line t-fill-strong py-2.5 text-xs font-semibold text-foreground"
             >
               Cancel
             </button>
@@ -1626,7 +1638,7 @@ export function SettingsScreen() {
                 await resetToSample();
                 setResetConfirmOpen(false);
               }}
-              className="flex-1 rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
+              className="flex-1 rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[var(--t-accent-ink)]"
             >
               Restore Now
             </button>
@@ -1637,136 +1649,113 @@ export function SettingsScreen() {
   );
 }
 
-const accents = [
-  { id: 'jade', name: 'Jade', color: '#25dac5' },
-  { id: 'ocean', name: 'Ocean', color: '#318cf4' },
-  { id: 'orchid', name: 'Orchid', color: '#a452df' },
-  { id: 'sunset', name: 'Sunset', color: '#ff7a45' },
-  { id: 'mono', name: 'Mono', color: '#8d9898' },
-] as const;
+// ─────────────────────────────────────────────────────────────────────────
+// Appearance — theme browser
+//
+// One card per theme. The card's preview is a miniature of the REAL app
+// chrome built from the same design tokens: the wrapper carries
+// `data-theme="<id variants…>"`, which scopes every [data-theme] rule in
+// globals.css to the card. So previews are honest at all times — a theme
+// that is *not* applied renders exactly as it would applied. Tapping applies
+// instantly (store → CSS attribute swap, no remount) and persists the id to
+// IndexedDB + the localStorage pre-paint mirror.
+// ─────────────────────────────────────────────────────────────────────────
+
+function ThemeMiniPreview({ theme }: { theme: StashTheme }) {
+  return (
+    <span className="theme-mini" data-theme={theme.cssAttr} aria-hidden>
+      <span className="theme-mini-top">
+        <span>S T A S H</span>
+        <em>{theme.scheme === 'dark' ? 'Dark' : 'Light'}</em>
+      </span>
+      <span className="theme-mini-hero">
+        <strong className="theme-mini-h">Good evening</strong>
+        <span className="theme-mini-line">
+          <i />
+          <i />
+        </span>
+      </span>
+      <span className="theme-mini-row">
+        <span className="theme-mini-tile">
+          <ImageIcon size={12} />
+        </span>
+        <span className="theme-mini-lines">
+          <i />
+          <i />
+        </span>
+        <span className="theme-mini-btn">SAVE</span>
+      </span>
+      <span className="theme-mini-nav">
+        <i className="is-active">
+          <Home size={10} />
+        </i>
+        <i>
+          <Search size={10} />
+        </i>
+        <i />
+        <i>
+          <SlidersHorizontal size={10} />
+        </i>
+        <i>
+          <Palette size={10} />
+        </i>
+        <span className="theme-mini-fab">
+          <Plus size={9} />
+        </span>
+      </span>
+    </span>
+  );
+}
 
 export function AppearanceScreen() {
   const { settings, updateSettings, navigate } = useStashStore();
-  const dark = settings.theme === 'dark';
 
   return (
     <div className="screen-stack space-y-6">
-      <PageHeader back={() => navigate('settings')} eyebrow="SETTINGS" title="Appearance" />
+      <PageHeader back={() => navigate('settings')} eyebrow="STASH" title="Appearance" />
+      <p className="page-subtitle">
+        Ten built looks, one STASH. Tap a card to apply it instantly — the choice is stored on this device and
+        survives restarts, in the PWA and the Android app alike.
+      </p>
 
-      {/* Dark Mode Switch */}
-      <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-[var(--stash-accent)]">
-              {dark ? <Moon size={18} /> : <Sun size={18} />}
-            </span>
-            <div>
-              <strong className="block text-sm font-semibold text-foreground">Dark mode</strong>
-              <small className="text-xs text-muted-foreground">Toggle between dark and light appearance</small>
-            </div>
-          </div>
-          <Switch
-            checked={dark}
-            onCheckedChange={(checked) => updateSettings({ theme: checked ? 'dark' : 'light' })}
-            aria-label="Dark mode toggle"
-          />
-        </div>
+      <section aria-label="Theme gallery" className="theme-gallery">
+        {STASH_THEMES.map((theme) => {
+          const selected = settings.themeId === theme.id;
+          return (
+            <button
+              key={theme.id}
+              type="button"
+              data-testid={`theme-card-${theme.id}`}
+              aria-pressed={selected}
+              onClick={() => void updateSettings({ themeId: theme.id })}
+              className={cn('theme-card focus-ring', selected && 'is-selected')}
+            >
+              {selected && (
+                <span className="theme-card-check" aria-hidden>
+                  <Check size={12} />
+                </span>
+              )}
+              <ThemeMiniPreview theme={theme} />
+              <span className="theme-card-meta">
+                <strong>{theme.name}</strong>
+                <small>{theme.description}</small>
+                <span className="theme-card-tags">
+                  <em>{theme.scheme === 'dark' ? 'Dark' : 'Light'}</em>
+                  <em>{theme.typeLabel}</em>
+                  {selected && <em className="is-on">Applied</em>}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </section>
+
+      <Surface className="rounded-2xl border t-line t-fill p-4">
+        <p className="text-xs t-ink-soft leading-relaxed">
+          Themes retune typography, surfaces, radii, borders, glass, backgrounds, shadows, navigation, buttons,
+          spacing, icon tiles and decorative details — the layout and your data stay identical under every look.
+        </p>
       </Surface>
-
-      {/* Theme Accent (Stash 2 & 6) */}
-      <section>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Theme accent</h2>
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs text-muted-foreground mb-4">Choose how STASH looks and feels across buttons and badges.</p>
-          <div className="grid grid-cols-5 gap-3">
-            {accents.map((accent) => (
-              <button
-                key={accent.id}
-                onClick={() => updateSettings({ accent: accent.id })}
-                className="flex flex-col items-center gap-2 focus-ring cursor-pointer group"
-              >
-                <span
-                  className="flex h-12 w-12 items-center justify-center rounded-full text-neutral-950 font-bold shadow-md transition-transform group-hover:scale-105"
-                  style={{ backgroundColor: accent.color }}
-                >
-                  {settings.accent === accent.id && <Check size={18} />}
-                </span>
-                <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground">
-                  {accent.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </Surface>
-      </section>
-
-      {/* 3 Realistic Micro-Screen Previews (Stash 6) */}
-      <section>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Live Previews</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Micro 1: Home */}
-          <div className="rounded-2xl border border-white/15 bg-[#081516] p-3 shadow-lg">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--stash-accent)] block mb-1">
-              Home
-            </span>
-            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-2.5 space-y-2">
-              <strong className="text-xs text-foreground block">Good evening</strong>
-              <div className="grid grid-cols-3 gap-1">
-                <div className="rounded-lg bg-white/5 p-1.5 text-center">
-                  <span className="text-[11px] font-bold text-[var(--stash-accent)]">12</span>
-                  <p className="text-[8px] text-muted-foreground">Unsorted</p>
-                </div>
-                <div className="rounded-lg bg-white/5 p-1.5 text-center">
-                  <span className="text-[11px] font-bold text-[var(--stash-accent)]">7</span>
-                  <p className="text-[8px] text-muted-foreground">Links</p>
-                </div>
-                <div className="rounded-lg bg-white/5 p-1.5 text-center">
-                  <span className="text-[11px] font-bold text-[var(--stash-accent)]">4</span>
-                  <p className="text-[8px] text-muted-foreground">Notes</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Micro 2: Note */}
-          <div className="rounded-2xl border border-white/15 bg-[#081516] p-3 shadow-lg">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--stash-accent)] block mb-1">
-              Note
-            </span>
-            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-2.5 space-y-2">
-              <div className="h-12 w-full overflow-hidden rounded-lg bg-neutral-900">
-                <img src="/assets/cabin.jpg" alt="" className="h-full w-full object-cover" />
-              </div>
-              <strong className="text-xs text-foreground block truncate">Cabin design</strong>
-              <div className="flex gap-1">
-                <span className="rounded bg-teal-500/20 px-1 text-[9px] text-teal-300">#minimal</span>
-                <span className="rounded bg-teal-500/20 px-1 text-[9px] text-teal-300">#cabin</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Micro 3: Note Detail Checklist */}
-          <div className="rounded-2xl border border-white/15 bg-[#081516] p-3 shadow-lg">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--stash-accent)] block mb-1">
-              Note Detail
-            </span>
-            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-2.5 space-y-1.5">
-              <strong className="text-xs text-foreground block truncate">Porto Travel Guide</strong>
-              <div className="space-y-1 text-[9px] text-muted-foreground">
-                <div className="flex items-center gap-1 text-teal-300">
-                  <Check size={10} /> <span>Things to do</span>
-                </div>
-                <div className="flex items-center gap-1 text-teal-300">
-                  <Check size={10} /> <span>Food & Drinks</span>
-                </div>
-                <div className="flex items-center gap-1 text-teal-300">
-                  <Check size={10} /> <span>Where to stay</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
@@ -1892,7 +1881,7 @@ export function BackupScreen() {
       )}
 
       {/* Storage Gauge Card */}
-      <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <Surface className="rounded-2xl border t-line t-fill p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
             <strong className="text-base font-bold text-foreground">Storage Usage</strong>
@@ -1939,7 +1928,7 @@ export function BackupScreen() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           onClick={exportBackup}
-          className="flex flex-col items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition-all hover:bg-white/[0.07] hover:border-white/20 focus-ring"
+          className="flex flex-col items-start gap-2 rounded-2xl border t-line t-fill p-5 text-left transition-all t-fill-hover focus-ring"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 mb-1">
             <Download size={20} />
@@ -1952,7 +1941,7 @@ export function BackupScreen() {
 
         <button
           onClick={handleImport}
-          className="flex flex-col items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition-all hover:bg-white/[0.07] hover:border-white/20 focus-ring"
+          className="flex flex-col items-start gap-2 rounded-2xl border t-line t-fill p-5 text-left transition-all t-fill-hover focus-ring"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 mb-1">
             <Upload size={20} />
@@ -1966,7 +1955,7 @@ export function BackupScreen() {
 
       {status && <div className="rounded-xl bg-teal-500/20 p-3 text-xs font-medium text-teal-200">{status}</div>}
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="rounded-2xl border t-line t-fill p-4 flex items-center gap-3 text-xs text-muted-foreground">
         <ShieldCheck size={20} className="text-[var(--stash-accent)] shrink-0" />
         <p>Backups are manual — there is no automatic cloud backup. They are unencrypted JSON; keep them somewhere you trust.</p>
       </div>
@@ -1982,7 +1971,7 @@ export function InstallScreen() {
       <PageHeader back={() => navigate('settings')} eyebrow="PWA" title="Install STASH" />
       <p className="page-subtitle">A faster, full-screen home for everything you save.</p>
 
-      <Surface className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 backdrop-blur-2xl">
+      <Surface className="rounded-2xl border t-line t-fill p-5 backdrop-blur-2xl">
         <div className="flex items-center gap-4">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--stash-accent)]/20 text-[var(--stash-accent)] shrink-0">
             <Sparkles size={24} />
@@ -1995,7 +1984,7 @@ export function InstallScreen() {
           </div>
           <button
             onClick={() => window.dispatchEvent(new Event('stash-install-request'))}
-            className="rounded-full bg-[var(--stash-accent)] px-5 py-2.5 text-xs font-bold text-[#032e2a] hover:brightness-105 shrink-0 focus-ring"
+            className="rounded-full bg-[var(--stash-accent)] px-5 py-2.5 text-xs font-bold text-[var(--t-accent-ink)] hover:brightness-105 shrink-0 focus-ring"
           >
             Install App
           </button>
@@ -2003,21 +1992,21 @@ export function InstallScreen() {
       </Surface>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-1.5">
+        <Surface className="rounded-2xl border t-line t-fill p-4 space-y-1.5">
           <strong className="text-sm font-semibold text-foreground block">iPhone & iPad</strong>
           <p className="text-xs text-muted-foreground leading-relaxed">
             In Safari, tap the <span className="font-semibold text-foreground">Share</span> icon, then choose <span className="font-semibold text-foreground">“Add to Home Screen”</span>.
           </p>
         </Surface>
 
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-1.5">
+        <Surface className="rounded-2xl border t-line t-fill p-4 space-y-1.5">
           <strong className="text-sm font-semibold text-foreground block">Android</strong>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Open Chrome menu (three dots) and tap <span className="font-semibold text-foreground">“Install app”</span> or <span className="font-semibold text-foreground">“Add to Home screen”</span>.
           </p>
         </Surface>
 
-        <Surface className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-1.5">
+        <Surface className="rounded-2xl border t-line t-fill p-4 space-y-1.5">
           <strong className="text-sm font-semibold text-foreground block">Mac & Windows</strong>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Click the install badge in the browser address bar or use the Install App button above.
@@ -2035,20 +2024,19 @@ export function AboutScreen() {
     <div className="screen-stack space-y-5">
       <PageHeader back={() => navigate('settings')} eyebrow="STASH" title="About" />
 
-      <Surface className="rounded-[2rem] border border-white/15 bg-white/[0.04] p-6 backdrop-blur-2xl space-y-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--stash-accent)]/20 text-[var(--stash-accent)]">
-          <Sparkles size={24} />
+      <Surface className="about-card stash-surface">
+        <span className="app-icon overflow-hidden">
+          <img src="/icon.svg" alt="" className="h-full w-full" />
         </span>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">Save now. Find it when it matters.</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          STASH is a private, local-first memory space for the useful things that usually disappear across tabs, screenshots, files, and notes.
+        <h2>Save now. Find it when it matters.</h2>
+        <p>
+          STASH is a private, local-first memory space for the useful things that usually disappear across tabs,
+          screenshots, files, and notes. Ten themes, one app — on Android, iPhone (Safari PWA) and the web.
         </p>
-        <span className="text-xs text-[var(--stash-accent)] font-semibold block pt-2">
-          Version 1.0.0
-        </span>
+        <span className="t-label">{bundledVersionLabel()}</span>
       </Surface>
 
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="space-y-2 rounded-2xl border t-line t-fill p-4">
         {[
           'Private by default — no mandatory accounts',
           'IndexedDB local persistence in browser',
@@ -2056,36 +2044,213 @@ export function AboutScreen() {
           'Offline Progressive Web App support',
           'Full portable JSON backup import & export',
         ].map((feature) => (
-          <div key={feature} className="flex items-center gap-2.5 text-xs text-muted-foreground">
+          <div key={feature} className="flex items-center gap-2.5 text-xs t-ink-soft">
             <Check size={14} className="text-[var(--stash-accent)] shrink-0" />
             <span>{feature}</span>
           </div>
         ))}
       </div>
 
+      {/* Support STASH (Ko-fi primary + Share) */}
+      <SupportSection withHeading />
+
+      {/* Android APK updater (Settings/About → Check for updates) */}
+      <AndroidUpdateSection />
+
       <div className="space-y-2">
-        <Link href="/privacy" className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 hover:bg-white/[0.06] transition-colors">
+        <Link href="/privacy" className="flex items-center justify-between rounded-2xl border t-line t-fill p-4 hover:bg-[var(--t-overlay-hover)] transition-colors">
           <div className="flex items-center gap-3">
             <ShieldCheck size={18} className="text-[var(--stash-accent)]" />
             <div>
               <strong className="block text-sm font-semibold text-foreground">Privacy Policy</strong>
-              <small className="text-xs text-muted-foreground">Zero-telemetry local data handling</small>
+              <small className="text-xs t-ink-soft">Zero-telemetry local data handling</small>
             </div>
           </div>
-          <ChevronRight size={18} className="text-muted-foreground" />
+          <ChevronRight size={18} className="t-ink-soft" />
         </Link>
 
-        <Link href="/changelog" className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 hover:bg-white/[0.06] transition-colors">
+        <Link href="/changelog" className="flex items-center justify-between rounded-2xl border t-line t-fill p-4 hover:bg-[var(--t-overlay-hover)] transition-colors">
           <div className="flex items-center gap-3">
             <CircleHelp size={18} className="text-[var(--stash-accent)]" />
             <div>
               <strong className="block text-sm font-semibold text-foreground">Changelog</strong>
-              <small className="text-xs text-muted-foreground">Recent improvements and updates</small>
+              <small className="text-xs t-ink-soft">Recent improvements and updates</small>
             </div>
           </div>
-          <ChevronRight size={18} className="text-muted-foreground" />
+          <ChevronRight size={18} className="t-ink-soft" />
         </Link>
       </div>
     </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Support STASH — external links only (Ko-fi is the primary option). There
+ * is deliberately NO in-app payment processing anywhere in this section.
+ * The Ko-fi URL lives in one place: lib/stash/config.ts.
+ * ────────────────────────────────────────────────────────────────────────── */
+export function SupportSection({ withHeading = false }: { withHeading?: boolean }) {
+  const [shareNote, setShareNote] = useState<string>();
+
+  return (
+    <section>
+      {withHeading && (
+        <h2 className="text-xs font-bold uppercase tracking-wider t-ink-soft mb-3">Support STASH</h2>
+      )}
+      <Surface className="rounded-2xl border t-line overflow-hidden divide-y divide-[color:var(--t-line-soft)]">
+        <div className="flex items-center gap-3 p-4">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
+            <Coffee size={18} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <strong className="block text-sm font-semibold text-foreground">Buy us a coffee</strong>
+            <small className="block text-xs t-ink-soft mt-0.5 leading-relaxed">
+              STASH is free and ad-free forever. Ko-fi keeps the lights on — links out, never charges inside the app.
+            </small>
+          </div>
+          <button
+            type="button"
+            onClick={() => openExternal(STASH_CONFIG.support.kofiUrl)}
+            className="primary-button focus-ring shrink-0 !min-h-10 !px-4 !text-xs"
+          >
+            <ExternalLink size={14} />
+            Ko-fi
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 p-4">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
+            <Share2 size={18} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <strong className="block text-sm font-semibold text-foreground">Share STASH</strong>
+            <small className="block text-xs t-ink-soft mt-0.5">
+              {shareNote ?? 'Tell a friend — uses the native share sheet where available.'}
+            </small>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await shareItem(STASH_CONFIG.support.shareTitle, STASH_CONFIG.support.shareText, resolveShareUrl());
+              setShareNote('Thanks for spreading the word!');
+              window.setTimeout(() => setShareNote(undefined), 2500);
+            }}
+            className="secondary-button focus-ring shrink-0 !min-h-10 !px-4 !text-xs"
+          >
+            <Share2 size={14} />
+            Share
+          </button>
+        </div>
+      </Surface>
+    </section>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Android update channel — Settings/About → Check for updates.
+ *
+ * Flow: fetch the tiny remote version.json (URL in lib/stash/config.ts),
+ * compare with the *installed* build via @capacitor/app, and offer
+ * "Download update" which opens the APK externally. Installing the newer APK
+ * over the existing one is safe *because* the package id (com.stash.app) and
+ * signing key never change — Android keeps app data across same-signature
+ * upgrades, so IndexedDB storage survives.
+ *
+ * On web / PWA this section explains the update prompt instead: the service
+ * worker surfaces "Update available / Refresh now" automatically.
+ * ────────────────────────────────────────────────────────────────────────── */
+export function AndroidUpdateSection() {
+  const isNativeAndroid = platform === 'capacitor';
+  const [installed, setInstalled] = useState<string>(STASH_CONFIG.app.version.name);
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<UpdateCheckResult | undefined>();
+
+  useEffect(() => {
+    void readInstalledBuild().then((build) => setInstalled(build.versionName));
+  }, []);
+
+  const runCheck = async () => {
+    setChecking(true);
+    setResult(undefined);
+    setResult(await checkForAndroidUpdate());
+    setChecking(false);
+  };
+
+  return (
+    <section>
+      <h2 className="text-xs font-bold uppercase tracking-wider t-ink-soft mb-3">Updates</h2>
+      <Surface className="rounded-2xl border t-line p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl t-fill-strong text-[var(--stash-accent)]">
+            <RefreshCw size={18} className={checking ? 'animate-spin' : undefined} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <strong className="block text-sm font-semibold text-foreground">
+              {isNativeAndroid ? 'Check for updates' : 'Android &amp; PWA updates'}
+            </strong>
+            <small className="block text-xs t-ink-soft mt-0.5">
+              {isNativeAndroid
+                ? `Installed version ${installed}. Compares against the latest release list.`
+                : 'On web / iPhone PWA, new versions arrive with the “Update available” prompt — tap Refresh now.'}
+            </small>
+          </div>
+          {isNativeAndroid && (
+            <button
+              type="button"
+              disabled={checking}
+              onClick={() => void runCheck()}
+              className="secondary-button focus-ring shrink-0 !min-h-10 !px-4 !text-xs disabled:opacity-60"
+            >
+              {checking ? 'Checking…' : 'Check now'}
+            </button>
+          )}
+        </div>
+
+        {result?.status === 'up-to-date' && (
+          <p className="mt-3 rounded-xl bg-[var(--t-overlay)] px-3 py-2.5 text-xs t-ink-soft leading-relaxed">
+            You are up to date — version {installed} is the latest release.
+          </p>
+        )}
+
+        {result?.status === 'unreachable' && (
+          <p className="mt-3 rounded-xl bg-[var(--t-overlay)] px-3 py-2.5 text-xs text-amber-400 leading-relaxed">
+            {result.error}
+          </p>
+        )}
+
+        {result?.status === 'available' && (
+          <div className="mt-3 rounded-xl border t-line p-3 space-y-2" data-testid="update-result">
+            <div className="flex items-center justify-between text-xs">
+              <span className="t-ink-soft">Current</span>
+              <strong className="text-foreground">{installed}</strong>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="t-ink-soft">Latest</span>
+              <strong className="text-[var(--stash-accent)]">
+                {result.latest.versionName}
+                {result.latest.releasedAt ? ` · ${result.latest.releasedAt.slice(0, 10)}` : ''}
+              </strong>
+            </div>
+            {result.latest.notes && (
+              <p className="text-xs t-ink-soft leading-relaxed whitespace-pre-line border-t pt-2 mt-2 border-[color:var(--t-line-soft)]">
+                {result.latest.notes}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => openExternal(result.latest.url)}
+              className="primary-button focus-ring w-full !min-h-11 text-sm"
+            >
+              <Download size={15} />
+              Download update
+            </button>
+            <p className="text-[10px] t-ink-soft leading-relaxed">
+              Android installs the APK itself. Same package (com.stash.app) and same signing key mean the new
+              version installs <em>over</em> this one — your saved items stay intact. No uninstall needed.
+            </p>
+          </div>
+        )}
+      </Surface>
+    </section>
   );
 }

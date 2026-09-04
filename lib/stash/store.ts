@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { db, ensureSeeded, resetSampleData } from './db';
 import { defaultSettings } from './sample-data';
+import { persistThemeId, readStoredThemeId } from './themes';
 import type { AppView, CreateItemInput, StashCollection, StashItem, StashItemType, StashSettings } from './types';
 import { markPersistRequested, requestPersist, wasPersistRequested } from './persistence';
 
@@ -114,10 +115,19 @@ export const useStashStore = create<StashState>((set, get) => ({
         }
       }
 
+      const merged: StashSettings = settings ? { ...defaultSettings, ...settings } : defaultSettings;
+      // A settings row written before the theme system has no `themeId`;
+      // prefer the localStorage mirror so a theme chosen (but not yet fully
+      // persisted) still wins after a restart/reload.
+      if (!settings?.themeId) {
+        const mirrored = readStoredThemeId();
+        if (mirrored) merged.themeId = mirrored;
+      }
+
       set({
         items,
         collections,
-        settings: settings ? { ...defaultSettings, ...settings } : defaultSettings,
+        settings: merged,
         recentSearches: savedSearches,
         ready: true,
       });
@@ -251,6 +261,10 @@ export const useStashStore = create<StashState>((set, get) => ({
 
   updateSettings: async (patch) => {
     const settings = { ...get().settings, ...patch };
+    // Mirror the theme to localStorage *before* the async IndexedDB write so
+    // the pre-paint bootstrap script (app/layout.tsx) finds it instantly on a
+    // cold start / reload, even if the transaction is still settling.
+    if (patch.themeId) persistThemeId(patch.themeId);
     await db.settings.put(settings);
     set({ settings });
   },

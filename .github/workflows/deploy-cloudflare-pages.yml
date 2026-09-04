@@ -1,0 +1,104 @@
+name: Deploy to Cloudflare Pages
+
+# Production PWA host for STASH (free tier). Builds the root-path static
+# bundle (`pnpm build:pages` → dist/public) and uploads it with Wrangler.
+#
+# Required once, in Settings → Secrets and variables → Actions:
+#   CLOUDFLARE_API_TOKEN   — Cloudflare dashboard → My Profile → API Tokens,
+#                            template "Edit Cloudflare Workers" (Pages:Edit).
+#   CLOUDFLARE_ACCOUNT_ID  — shown in the dashboard right-hand rail.
+# Optional repository VARIABLE:
+#   CF_PAGES_PROJECT       — Pages project name (default: "stash").
+#
+# If the secret is not configured, the workflow builds and validates the
+# bundle but SKIPS the deploy step instead of failing the run.
+#
+# Alternative zero-CI path: connect the (private) repo in Cloudflare Pages
+# itself — build command `pnpm build:pages`, output directory `dist/public`,
+# root path (no base URL). See docs/cloudflare-pages-deploy.md.
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: cf-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build + deploy PWA to Cloudflare Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies (lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Cloudflare Pages bundle (root path)
+        run: pnpm build:pages
+
+      # Cheap bundle self-checks — fail loudly instead of deploying a broken
+      # PWA: installability + service worker must live at the ROOT.
+      - name: Verify root-path bundle
+        run: |
+          test -f dist/public/manifest.webmanifest
+          test -f dist/public/sw.js
+          test -f dist/public/index.html
+          test -f dist/public/app/index.html
+          test -f dist/public/pwa-512x512.png
+          test -f dist/public/maskable-icon-512x512.png
+          test -f dist/public/apple-touch-icon-180x180.png
+          test -f dist/public/version.json
+          test -f dist/public/_headers
+          node -e '
+            const m = JSON.parse(require("fs").readFileSync("dist/public/manifest.webmanifest","utf8"));
+            const fail = (msg) => { console.error("[cf-pages] " + msg); process.exit(1); };
+            if (!m.start_url.startsWith("/app")) fail("manifest start_url must be /app (got " + m.start_url + ")");
+            if (m.scope !== "/") fail("manifest scope must be / (got " + m.scope + ")");
+            for (const icon of m.icons ?? []) if (!icon.src.startsWith("/")) fail("icon src must be root-absolute: " + icon.src);
+            const sw = require("fs").readFileSync("dist/public/sw.js","utf8");
+            if (!sw.includes("stash-pwa-v")) fail("service worker cache name missing");
+            console.log("[cf-pages] root-path bundle verified");
+          '
+
+      - name: Detect Cloudflare credentials
+        id: cf
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n \"$TOKEN\" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.cf.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          PROJECT="${{ vars.CF_PAGES_PROJECT || 'stash' }}"
+          npx --yes wrangler@4 pages deploy dist/public --project-name "$PROJECT" --branch production --commit-dirty=true
+
+      - name: Deploy skipped note
+        if: steps.cf.outputs.configured != 'true'
+        run: |
+          echo "::notice::CLOUDFLARE_API_TOKEN secret is not configured — build verified, deploy skipped."
+          echo "See docs/cloudflare-pages-deploy.md for the one-time setup."

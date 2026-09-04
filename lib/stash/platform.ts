@@ -131,14 +131,39 @@ export function registerBackHandler(handler: () => boolean): void {
   }
 }
 
-export function applyStatusBar(): void {
+/**
+ * Tint the Android status bar to match the selected theme. Light themes
+ * (Archive Paper, Neo Brutal, …) need dark icons; dark themes get light
+ * icons. No-op outside Capacitor; safe to call on every theme change.
+ */
+export function applyStatusBar(theme?: { scheme?: 'light' | 'dark'; statusBarColor?: string }): void {
   if (platform === 'capacitor') {
     void import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
-      // Default app theme is dark, so use light icons over a dark bar. The
-      // in-app theme toggle keeps the web content readable regardless.
-      StatusBar.setStyle({ style: Style.Light }).catch(() => undefined);
-      StatusBar.setBackgroundColor({ color: '#061112' }).catch(() => undefined);
+      const scheme = theme?.scheme ?? 'dark';
+      const color = theme?.statusBarColor ?? '#061112';
+      // Style.Light = light icons (over dark bars); Style.Dark = dark icons.
+      StatusBar.setStyle({ style: scheme === 'dark' ? Style.Light : Style.Dark }).catch(() => undefined);
+      StatusBar.setBackgroundColor({ color }).catch(() => undefined);
     });
+  }
+}
+
+/**
+ * Open a URL outside the app (system browser). Used by Support → Ko-fi and
+ * the APK "Download update" action. Deliberately no in-app webview/payment:
+ * STASH v1 links out only.
+ */
+export function openExternal(url: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } catch {
+    // Some WebViews block window.open; fall back to a synthetic anchor.
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.click();
   }
 }
 

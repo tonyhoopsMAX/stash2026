@@ -1,0 +1,30 @@
+# Cloudflare Pages custom headers (ignored by other static hosts).
+# - The service worker must always revalidate so updates are detected on the
+#   next navigation (the in-app "Update available" prompt depends on it).
+# - Hashed build chunks are immutable and cached forever.
+# - HTML is revalidated so deep links never serve stale app shells.
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/version.json
+  Cache-Control: public, max-age=60, must-revalidate
+  Access-Control-Allow-Origin: *
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+
+/manifest.json
+  Cache-Control: public, max-age=3600
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/app
+/app/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY

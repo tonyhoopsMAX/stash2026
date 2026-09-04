@@ -17,6 +17,7 @@
  * double-slashes, missed escapes).
  */
 import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 type RunResult = { stdout: string; stderr: string; status: number };
@@ -95,6 +96,27 @@ describe('build-public.mjs', () => {
     expect(status, stdout).toBe(0);
     expect(stdout).toMatch(/start_url:\s+\/app\b/);
     expect(stdout).toMatch(/Service worker scope:\s+\/$/m);
+  });
+
+  it('DEFAULTS to a root-path (Cloudflare Pages) deployment with no env var', () => {
+    // Cloudflare Pages is the production target: no /stash2026/ prefix,
+    // manifest start_url /app, SW scope "/" — all straight from the default.
+    const { stdout, status } = runBuildPublic(null);
+    expect(status, stdout).toBe(0);
+    expect(stdout).toMatch(/start_url:\s+\/app\b/);
+    expect(stdout).toMatch(/Service worker scope:\s+\/$/m);
+    expect(stdout).toMatch(/base="\/"/);
+  });
+
+  it('ships the Cloudflare Pages _headers and the version.json update manifest in dist/public', () => {
+    const { status, stdout } = runBuildPublic(null);
+    expect(status, stdout).toBe(0);
+    expect(existsSync('dist/public/_headers'), 'missing dist/public/_headers').toBe(true);
+    expect(existsSync('dist/public/version.json'), 'missing dist/public/version.json').toBe(true);
+    expect(existsSync('dist/public/sw.js'), 'missing dist/public/sw.js').toBe(true);
+    const headers = readFileSync('dist/public/_headers', 'utf8');
+    expect(headers).toContain('/sw.js');
+    expect(headers).toMatch(/must-revalidate/);
   });
 });
 

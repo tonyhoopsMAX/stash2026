@@ -7,8 +7,13 @@ android {
         applicationId "com.stash.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // STASH v1 release identity.
+        //   * applicationId stays com.stash.app forever (update-over-install
+        //     depends on it, plus WebView IndexedDB data partitioning).
+        //   * bump versionCode by +1 for every shipped APK and mirror the
+        //     version in lib/stash/config.ts + public/version.json.
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +21,29 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing: stable-identity-by-construction. The signing key is
+    // NEVER changed casually — the APK must install OVER existing versions
+    // (same package + same key = Android keeps all app data).
+    // Provide the keystore via CI secrets/env; without them the release
+    // build is unsigned exactly like before.
+    signingConfigs {
+        stashRelease {
+            def ksPath = System.getenv('STASH_KEYSTORE_PATH')
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv('STASH_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('STASH_KEY_ALIAS')
+                keyPassword System.getenv('STASH_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (System.getenv('STASH_KEYSTORE_PATH')) {
+                signingConfig signingConfigs.stashRelease
+            }
         }
     }
 }

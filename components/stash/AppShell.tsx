@@ -45,6 +45,8 @@ import {
 } from './screens';
 import { cn } from './ui';
 import { applyStatusBar, registerBackHandler } from '@/lib/stash/platform';
+import { applyThemeToDocument } from '@/lib/stash/themes';
+import { useSwUpdate } from '@/hooks/use-sw-update';
 import { useStashStore } from '@/lib/stash/store';
 import type { AppView, StashItemType } from '@/lib/stash/types';
 import { useKeyboardOpen, useVisualViewport } from '@/hooks/use-visual-viewport';
@@ -92,14 +94,6 @@ const addChoices: Array<{ type: StashItemType; label: string; icon: typeof File 
   { type: 'file', label: 'File', icon: File },
   { type: 'idea', label: 'Idea', icon: Lightbulb },
 ];
-
-const accentValues = {
-  jade: ['#25dac5', '37 218 197'],
-  ocean: ['#318cf4', '49 140 244'],
-  orchid: ['#a452df', '164 82 223'],
-  sunset: ['#ff7a45', '255 122 69'],
-  mono: ['#8d9898', '141 152 152'],
-} as const;
 
 export function AppShell() {
   const store = useStashStore();
@@ -212,14 +206,17 @@ export function AppShell() {
     if (ready && !settings.onboardingComplete) setOnboarding(true);
   }, [ready, settings.onboardingComplete]);
 
+  // Theme system: one attribute on <html> re-skins the whole app. All visual
+  // dimensions live in the token blocks in app/globals.css ([data-theme]),
+  // so switching themes never remounts a screen or component.
   useEffect(() => {
-    const root = document.documentElement;
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    root.classList.toggle('dark', settings.theme === 'dark' || (settings.theme === 'system' && systemDark));
-    const [hex, rgb] = accentValues[settings.accent] || accentValues.jade;
-    root.style.setProperty('--stash-accent', hex);
-    root.style.setProperty('--stash-accent-rgb', rgb);
-  }, [settings]);
+    const theme = applyThemeToDocument(settings.themeId);
+    applyStatusBar(theme);
+  }, [settings.themeId]);
+
+  // PWA: surface a tiny "Update available / Refresh now" prompt when a new
+  // service-worker bundle is waiting (never applied silently).
+  const { updateAvailable, refresh } = useSwUpdate();
 
   useEffect(() => {
     const beforeInstall = (event: Event) => {
@@ -380,13 +377,14 @@ export function AppShell() {
 
   if (splash || !ready) {
     return (
-      <main className="splash-screen flex flex-col items-center justify-center min-h-screen bg-[#071314] text-foreground">
+      <main className="splash-screen flex flex-col items-center justify-center min-h-screen t-fill-strong text-foreground">
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="splash-mark flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--stash-accent)] text-[#032e2a] shadow-2xl shadow-[var(--stash-accent)]/30"
+          className="splash-mark flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl shadow-2xl shadow-[var(--stash-accent)]/30"
+          aria-label="STASH"
         >
-          <Sparkles size={36} />
+          <img src="/icon.svg" alt="" className="h-full w-full" />
         </motion.div>
         <motion.span
           initial={{ opacity: 0, y: 8 }}
@@ -403,16 +401,26 @@ export function AppShell() {
 
   return (
     <main className="app-root min-h-screen bg-background text-foreground">
+      {/* PWA update prompt — small, dismissible, never blocks the app. */}
+      {updateAvailable && (
+        <output className="sw-update-banner">
+          <span className="sw-update-dot" aria-hidden />
+          <span className="sw-update-text">Update available</span>
+          <button type="button" onClick={refresh} className="sw-update-action focus-ring">
+            Refresh now
+          </button>
+        </output>
+      )}
       {/* Desktop Sticky Sidebar */}
       <aside className="desktop-sidebar">
         <button
           onClick={() => navigate('home')}
-          className="brand-button focus-ring flex items-center gap-3 p-2 rounded-2xl hover:bg-white/5 transition-colors"
+          className="brand-button focus-ring flex items-center gap-3 p-2 rounded-2xl hover:t-fill-strong transition-colors"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--stash-accent)] text-[#032e2a] font-bold">
-            <Sparkles size={20} />
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl font-bold">
+            <img src="/icon.svg" alt="" className="h-full w-full" />
           </span>
-          <span className="text-base font-bold tracking-[0.25em] text-[var(--stash-accent)]">S T A S H</span>
+          <span className="text-base font-bold tracking-[0.25em] t-ink-soft">S T A S H</span>
         </button>
 
         <nav aria-label="App navigation" className="mt-4 space-y-1">
@@ -428,7 +436,7 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className="side-label mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">
+        <div className="side-label mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest t-ink-faint">
           Library
         </div>
         <nav aria-label="Library navigation" className="space-y-1">
@@ -445,7 +453,7 @@ export function AppShell() {
         </nav>
 
         {/* Local-First Indicator Pill */}
-        <div className="local-pill mt-auto flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-xs">
+        <div className="local-pill mt-auto flex items-center gap-3 rounded-2xl border t-line t-fill p-3 text-xs">
           <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', online ? 'online-dot' : 'offline-dot')} />
           <div className="min-w-0">
             <strong className="block font-semibold text-foreground truncate">
@@ -482,7 +490,7 @@ export function AppShell() {
             <button
               onClick={handleWaveformClick}
               className={cn(
-                'icon-button focus-ring relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all',
+                'icon-button focus-ring relative flex h-11 w-11 items-center justify-center rounded-full border t-line t-fill-strong t-fill-hover text-muted-foreground hover:text-foreground transition-all',
                 pulseActive && 'border-[var(--stash-accent)] text-[var(--stash-accent)] animate-pulse'
               )}
               aria-label="Resurface pulse"
@@ -494,7 +502,7 @@ export function AppShell() {
             {/* Notification Bell with Badge — 44pt touch target. */}
             <button
               onClick={() => setRemindersDrawerOpen(true)}
-              className="icon-button focus-ring relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
+              className="icon-button focus-ring relative flex h-11 w-11 items-center justify-center rounded-full border t-line t-fill-strong t-fill-hover text-muted-foreground hover:text-foreground transition-all"
               aria-label="Notifications"
               title="Notifications"
             >
@@ -610,8 +618,8 @@ export function AppShell() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               className="onboarding-card"
             >
-              <span className="app-icon">
-                <Sparkles size={24} />
+              <span className="app-icon overflow-hidden">
+                <img src="/icon.svg" alt="" className="h-full w-full object-cover" />
               </span>
               <p className="eyebrow">
                 WELCOME TO STASH
@@ -619,10 +627,10 @@ export function AppShell() {
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mt-1">
                 Remember more.<br />Organize less.
               </h1>
-              <p className="mt-3 text-sm text-neutral-300 leading-relaxed">
+              <p className="mt-3 text-sm t-ink-soft leading-relaxed">
                 Save the useful things that usually disappear across screenshots, tabs, notes, and files. Everything stays on this device.
               </p>
-              <div className="onboarding-points my-5 space-y-2 text-sm text-neutral-200">
+              <div className="onboarding-points my-5 space-y-2 text-sm t-ink-soft">
                 <span className="flex items-center gap-2">
                   <ShieldCheck size={18} className="text-[var(--stash-accent)]" />
                   Private by default in local IndexedDB
@@ -638,7 +646,7 @@ export function AppShell() {
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <button
-                  className="primary-button focus-ring w-full rounded-full bg-[var(--stash-accent)] py-3 font-bold text-[#032e2a] hover:brightness-105"
+                  className="primary-button focus-ring w-full rounded-full bg-[var(--stash-accent)] py-3 font-bold text-[var(--t-accent-ink)] hover:brightness-105"
                   onClick={async () => {
                     await store.updateSettings({ onboardingComplete: true });
                     setOnboarding(false);
@@ -647,7 +655,7 @@ export function AppShell() {
                   Start empty
                 </button>
                 <button
-                  className="secondary-button focus-ring w-full rounded-full border border-white/20 bg-white/5 py-3 font-bold text-white hover:bg-white/10"
+                  className="secondary-button focus-ring w-full rounded-full border t-line t-fill-strong py-3 font-bold text-white t-fill-hover"
                   onClick={async () => {
                     await store.resetToSample();
                     setOnboarding(false);
@@ -656,7 +664,7 @@ export function AppShell() {
                   Explore demo
                 </button>
               </div>
-              <p className="mt-3 text-center text-xs text-neutral-400">
+              <p className="mt-3 text-center text-xs t-ink-faint">
                 No account required. Everything stays on this device.
               </p>
             </motion.section>
@@ -668,7 +676,7 @@ export function AppShell() {
        *  shown in browser mode; standalone/native users get nothing. */}
       {appMode === 'browser' && (
         <Dialog open={installModalOpen} onOpenChange={setInstallModalOpen}>
-          <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+          <DialogContent className="rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <Laptop size={20} className="text-[var(--stash-accent)]" />
@@ -680,26 +688,26 @@ export function AppShell() {
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-sm text-muted-foreground">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="rounded-xl border t-line t-fill p-3">
                 <strong className="text-foreground block text-xs font-semibold mb-1">iPhone & iPad (Safari)</strong>
                 <p className="text-xs">Tap the <strong>Share</strong> button in Safari, then choose <strong>“Add to Home Screen”</strong> and confirm. The app will appear on your home screen with the STASH icon and run in full-screen, offline mode.</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="rounded-xl border t-line t-fill p-3">
                 <strong className="text-foreground block text-xs font-semibold mb-1">Android (Chrome)</strong>
                 <p className="text-xs">Tap the three-dot menu, then select <strong>“Install app”</strong> or <strong>“Add to Home screen”</strong>.</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="rounded-xl border t-line t-fill p-3">
                 <strong className="text-foreground block text-xs font-semibold mb-1">Mac & Windows</strong>
                 <p className="text-xs">Click the install icon in your address bar to add STASH as a standalone application.</p>
               </div>
-              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+              <p className="text-[11px] t-ink-faint leading-relaxed">
                 On iPhone, Add to Home Screen is only available in Safari. Other iOS browsers (Chrome, Firefox, Brave) can browse the site but cannot install the PWA.
               </p>
             </div>
 
             <button
               onClick={() => setInstallModalOpen(false)}
-              className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
+              className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[var(--t-accent-ink)]"
             >
               Got it
             </button>
@@ -709,7 +717,7 @@ export function AppShell() {
 
       {/* Reminders & Notifications Modal */}
       <Dialog open={remindersDrawerOpen} onOpenChange={setRemindersDrawerOpen}>
-        <DialogContent className="rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
+        <DialogContent className="rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-md text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Bell size={20} className="text-[var(--stash-accent)]" />
@@ -730,7 +738,7 @@ export function AppShell() {
                     setRemindersDrawerOpen(false);
                     navigate('detail', item.id);
                   }}
-                  className="w-full text-left flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-3 hover:bg-white/[0.07] cursor-pointer transition-colors"
+                  className="w-full text-left flex items-center justify-between rounded-xl border t-line t-fill p-3 t-fill-hover cursor-pointer transition-colors"
                 >
                   <div className="min-w-0 flex-1">
                     <strong className="block text-sm font-medium text-foreground truncate">{item.title}</strong>
@@ -756,7 +764,7 @@ export function AppShell() {
               setRemindersDrawerOpen(false);
               navigate('reminders');
             }}
-            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[#032e2a]"
+            className="w-full rounded-full bg-[var(--stash-accent)] py-2.5 text-xs font-semibold text-[var(--t-accent-ink)]"
           >
             View All Reminders
           </button>

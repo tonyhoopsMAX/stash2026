@@ -1,13 +1,15 @@
-// Assembles a fully self-contained static bundle for free public hosts
-// (GitHub Pages, Cloudflare Pages, Netlify, plain nginx, ...).
+// Assembles a fully self-contained static bundle for free public hosts.
+// PRODUCTION TARGET: Cloudflare Pages (free tier, root-path deployment).
+// Also fine for Netlify, plain nginx, or (legacy) GitHub Pages with an
+// explicit PUBLIC_BASE_PATH override.
 //
 // vinext prerenders every route to `dist/server/prerendered-routes/*.html`
 // and drops the client chunks / static assets under `dist/client`. This
 // script fuses the two into a single `dist/public/` folder that any
 // static host can serve as-is. It also prefixes every absolute URL with
 // the configured `PUBLIC_BASE_PATH` so the bundle works on both:
-//   * a user/org GitHub Pages site that serves at the root  (BASE="")
-//   * a project GitHub Pages site that serves at /<repo>/   (BASE="/stash2026")
+//   * Cloudflare Pages / user-org roots     (BASE="" — the DEFAULT)
+//   * legacy GitHub Pages project sites     (BASE="/stash2026")
 //
 // Differences from `build-native-web.mjs`:
 //   * All 7 prerendered routes are written as `<route>/index.html`, so
@@ -37,11 +39,12 @@ const clientDir = path.join(root, 'dist', 'client');
 const prerenderDir = path.join(root, 'dist', 'server', 'prerendered-routes');
 const outDir = path.join(root, 'dist', 'public');
 
-// PUBLIC_BASE_PATH is empty for root-hosted sites and "/<repo>" for
-// GitHub Pages project sites. We never emit a trailing slash here so
-// the resulting URLs are easy to grep; the post-process step normalizes
-// any double slashes that would otherwise appear in HTML attributes.
-const rawBase = (process.env.PUBLIC_BASE_PATH ?? '/stash2026').trim();
+// PUBLIC_BASE_PATH defaults to EMPTY = root deployment, which is exactly
+// what Cloudflare Pages wants (https://<project>.pages.dev/app, manifest
+// icons, SW scope "/", etc.). Set it to "/<repo>" only for the deprecated
+// GitHub Pages project-page flow. No trailing slash is emitted; the
+// post-process step normalizes any double slashes in HTML attributes.
+const rawBase = (process.env.PUBLIC_BASE_PATH ?? '').trim();
 const base = rawBase === '/' ? '' : rawBase.replace(/\/+$/, '');
 
 if (!fs.existsSync(clientDir)) {

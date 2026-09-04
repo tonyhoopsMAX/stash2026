@@ -131,7 +131,7 @@ export function CaptureDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="capture-dialog max-h-[92vh] overflow-y-auto rounded-[2rem] border border-white/15 bg-[#091718]/95 p-6 shadow-2xl backdrop-blur-3xl sm:max-w-xl text-foreground">
+      <DialogContent className="capture-dialog max-h-[92vh] overflow-y-auto rounded-[2rem] border t-line stash-dialog p-6 shadow-2xl backdrop-blur-3xl sm:max-w-xl text-foreground">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
             Save to STASH
@@ -152,7 +152,7 @@ export function CaptureDialog({
                   'flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2.5 text-xs font-medium transition-all focus-ring',
                   type === value
                     ? 'border border-[var(--stash-accent)] bg-[var(--stash-accent)]/15 text-[var(--stash-accent)] shadow-sm'
-                    : 'border border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground'
+                    : 'border t-line t-fill text-muted-foreground t-fill-hover hover:text-foreground'
                 )}
                 onClick={() => {
                   setType(value);
@@ -179,7 +179,7 @@ export function CaptureDialog({
                 'relative flex min-h-[7rem] w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-4 text-center transition-all focus-ring',
                 isDragging
                   ? 'border-[var(--stash-accent)] bg-[var(--stash-accent)]/10'
-                  : 'border-white/15 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]'
+                  : 't-line t-fill hover:border-[var(--t-line)] hover:t-fill'
               )}
             >
               <input
@@ -195,7 +195,7 @@ export function CaptureDialog({
                   <img
                     src={filePreview}
                     alt="Preview"
-                    className="h-16 w-16 rounded-xl object-cover border border-white/15 shadow-md"
+                    className="h-16 w-16 rounded-xl object-cover border t-line shadow-md"
                   />
                   <div className="text-left text-xs">
                     <p className="font-semibold text-foreground truncate max-w-[200px]">{file?.name}</p>
@@ -209,7 +209,7 @@ export function CaptureDialog({
                       setFile(undefined);
                       setFilePreview(undefined);
                     }}
-                    className="ml-2 rounded-full bg-white/10 p-1 text-muted-foreground hover:bg-white/20 hover:text-foreground"
+                    className="ml-2 rounded-full t-fill-hover p-1 text-muted-foreground t-fill-hover"
                     title="Remove file"
                   >
                     <X size={14} />
@@ -217,7 +217,7 @@ export function CaptureDialog({
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-[var(--stash-accent)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full t-fill-strong text-[var(--stash-accent)]">
                     <Upload size={18} />
                   </div>
                   <div>
@@ -245,7 +245,7 @@ export function CaptureDialog({
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com/article"
-                  className="w-full rounded-xl border border-white/15 bg-white/[0.04] py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
+                  className="w-full rounded-xl border t-line t-fill py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:t-ink-faint focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
                 />
               </div>
             </label>
@@ -264,7 +264,7 @@ export function CaptureDialog({
                   ? 'Meeting notes, thoughts, or reminder'
                   : 'Give it a descriptive name'
               }
-              className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
+              className="w-full rounded-xl border t-line t-fill px-3 py-2.5 text-sm text-foreground placeholder:t-ink-faint focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
             />
           </label>
 
@@ -278,7 +278,7 @@ export function CaptureDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add key insights, context, or takeaways for your future self…"
-              className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)] resize-none"
+              className="w-full rounded-xl border t-line t-fill px-3 py-2.5 text-sm text-foreground placeholder:t-ink-faint focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)] resize-none"
             />
           </label>
 
@@ -290,7 +290,7 @@ export function CaptureDialog({
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="architecture, cabin, minimal"
-                className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
+                className="w-full rounded-xl border t-line t-fill px-3 py-2.5 text-sm text-foreground placeholder:t-ink-faint focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
               />
             </label>
 
@@ -299,7 +299,7 @@ export function CaptureDialog({
               <select
                 value={collectionId}
                 onChange={(e) => setCollectionId(e.target.value)}
-                className="w-full rounded-xl border border-white/15 bg-[#091718] px-3 py-2.5 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
+                className="w-full rounded-xl border t-line t-fill-strong px-3 py-2.5 text-sm text-foreground focus:border-[var(--stash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--stash-accent)]"
               >
                 <option value="">Inbox (Unsorted)</option>
                 {collections.map((collection) => (
@@ -313,7 +313,7 @@ export function CaptureDialog({
 
           <button
             type="submit"
-            className="w-full rounded-full bg-[var(--stash-accent)] py-3 font-semibold text-[#032e2a] shadow-lg shadow-[var(--stash-accent)]/20 transition-transform active:scale-[0.98] hover:brightness-105 focus-ring"
+            className="w-full rounded-full bg-[var(--stash-accent)] py-3 font-semibold text-[var(--t-accent-ink)] shadow-lg shadow-[var(--stash-accent)]/20 transition-transform active:scale-[0.98] hover:brightness-105 focus-ring"
           >
             Save to STASH
           </button>

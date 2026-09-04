@@ -1,0 +1,8 @@
+{
+  "$comment": "STASH Android release manifest — deploy this file next to the PWA (Cloudflare Pages serves it at /version.json) or at the URL configured in lib/stash/config.ts (STASH_CONFIG.updates.android.manifestUrl). The in-app 'Check for updates' compares `versionCode`/`versionName` against the installed build and opens `url` externally. This file is intentionally served UNCACHED by the service worker. Bump for every new APK: same applicationId (com.stash.app) + same signing key means Android installs over the existing version and keeps all local data.",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "url": "https://github.com/tonyhoopsMAX/stash2026/releases/download/v1.0.0/STASH-Android.apk",
+  "notes": "First polished Android + PWA release: ten real UI themes, unified STASH branding, theme browser in Appearance, Ko-fi support link, and in-app update checks.",
+  "releasedAt": "2026-09-04"
+}
