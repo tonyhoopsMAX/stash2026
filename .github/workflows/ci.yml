@@ -65,7 +65,16 @@ jobs:
       # deterministic: the heavy /app client bundle is already bundled, so there
       # is no lazy on-demand transform to race the assertions on a cold runner.
       - name: Playwright E2E tests (production bundle)
-        run: pnpm test:e2e
+        # On failure, dump the junit report inline: the run-log download path
+        # is not always reachable, and the raw XML guarantees the failing
+        # testcase (or "did not run" abort) is visible in the artifact trail.
+        run: |
+          pnpm test:e2e || {
+            echo "::group::playwright junit.xml"
+            cat test-results/junit.xml || echo "no junit.xml written (run aborted before report)"
+            echo "::endgroup::"
+            exit 1
+          }
 
       - name: Upload Playwright report (success or failure)
         if: always()
