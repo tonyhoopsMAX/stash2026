@@ -40,8 +40,16 @@ test('iPhone Safari/WebKit: app boots mobile layout, PWA meta is wired, first ta
   // visual viewport is collapsed — an artifact emulator device metrics can
   // also trigger — so that state counts as handled, not broken.)
   const navState = await page.evaluate(() => {
-    const vis = (el: Element | null) =>
-      !!el && getComputedStyle(el).display !== 'none' && (el as HTMLElement).offsetParent !== null;
+    // NOTE: .bottom-nav is position:fixed, and fixed elements always report
+    // offsetParent === null — visibility must be judged via display,
+    // visibility and a non-zero box instead.
+    const vis = (el: Element | null) => {
+      if (!el) return false;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    };
     return {
       mobile: window.innerWidth <= 700,
       dock: vis(document.querySelector('.bottom-nav')),
