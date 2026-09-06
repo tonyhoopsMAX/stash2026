@@ -1,12 +1,15 @@
-<!-- STASH adaptive-icon foreground (108dp canvas; mark inside the 66dp
-     safe zone). Rendered transparent — pairs with ic_launcher_background
-     (#050f10) for the Android adaptive + legacy icon. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" fill="none">
-  <g transform="translate(432 432) scale(.68) translate(-432 -432)">
-    <rect x="118" y="316" width="276" height="56" rx="18" fill="#159d8f"/>
-    <rect x="144" y="248" width="224" height="56" rx="18" fill="#33dfc5"/>
-    <rect x="118" y="180" width="276" height="56" rx="18" fill="#8ff7e2"/>
-    <path d="M356 128c7.5 29.5 28.5 50.5 58 58-29.5 7.5-50.5 28.5-58 58-7.5-29.5-28.5-50.5-58-58 29.5-7.5 50.5-28.5 58-58Z" fill="#f2fffc"/>
-    <path d="M136 180a18 18 0 0 1 18-18h60v56h-60a18 18 0 0 1-18-18v-20Z" fill="#d8fff5" opacity=".5"/>
-  </g>
+<svg x="92" y="92" width="248" height="248" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="mintA" x1="146" y1="150" x2="374" y2="246" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#b5fff0"/><stop offset=".44" stop-color="#63f1d5"/><stop offset="1" stop-color="#19b69f"/>
+  </linearGradient>
+  <linearGradient id="mintB" x1="138" y1="272" x2="368" y2="370" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#35d9c0"/><stop offset=".55" stop-color="#17ad98"/><stop offset="1" stop-color="#0a7468"/>
+  </linearGradient>
+</defs>
+<path d="M160 168c0-22 18-40 40-40h152c22 0 40 18 40 40v10c0 14-8 27-21 34l-151 78c-28 14-60-6-60-37v-7c0-15 8-29 22-36l110-56H200c-22 0-40-18-40-40v-6Z" fill="url(#mintA)"/>
+<path d="M352 344c0 22-18 40-40 40H160c-22 0-40-18-40-40v-10c0-14 8-27 21-34l151-78c28-14 60 6 60 37v7c0 15-8 29-22 36l-110 56h92c22 0 40 18 40 40v6Z" fill="url(#mintB)"/>
+<path d="M380 103c5.2 21.2 20.1 36.1 41.3 41.3-21.2 5.2-36.1 20.1-41.3 41.3-5.2-21.2-20.1-36.1-41.3-41.3 21.2-5.2 36.1-20.1 41.3-41.3Z" fill="#ecfffa"/>
+</svg>
 </svg>
