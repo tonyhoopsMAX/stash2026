@@ -1,13 +1,23 @@
 name: Release
 
-# OPTIONAL release pipeline. When a version tag such as v1.0.0 is pushed,
-# GitHub builds the Android APK and the Windows app, then attaches them to a
-# release for that tag. It does NOT run on normal branch pushes, so nothing is
-# published until a tag is explicitly created.
+# Tag pushes keep the full Android + Windows release path. Manual dispatch is
+# optimized for the current Android-first release and can publish a new GitHub
+# Release in one click without rebuilding the paused Windows target.
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (example: v1.0.1)'
+        required: true
+        default: 'v1.0.1'
+      include_windows:
+        description: 'Also build the paused Windows target'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -42,6 +52,8 @@ jobs:
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Regenerate STASH icon and splash assets
+        run: pnpm icons:render
       - name: Build shared STASH web application
         run: pnpm build:web
       - name: Build native web bundle
@@ -65,6 +77,7 @@ jobs:
 
   windows:
     name: Build Windows App
+    if: github.event_name == 'push' || inputs.include_windows == true
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -119,6 +132,7 @@ jobs:
     needs:
       - android
       - windows
+    if: always() && needs.android.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Download Android artifact
@@ -127,6 +141,7 @@ jobs:
           name: android-apk
           path: artifacts/android
       - name: Download Windows artifact
+        if: needs.windows.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: windows-msi
@@ -134,6 +149,8 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.event_name == 'workflow_dispatch' && 'master' || github.sha }}
           generate_release_notes: true
           fail_on_unmatched_files: false
           files: |

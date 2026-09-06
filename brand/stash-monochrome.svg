@@ -1,9 +1,4 @@
-<!-- STASH adaptive-icon monochrome layer (Android 13+ themed icons). -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" fill="none">
-  <g transform="translate(432 432) scale(.66) translate(-432 -432)" fill="#ffffff">
-    <rect x="118" y="316" width="276" height="56" rx="18"/>
-    <rect x="144" y="248" width="224" height="56" rx="18" opacity=".78"/>
-    <rect x="118" y="180" width="276" height="56" rx="18"/>
-    <path d="M356 128c7.5 29.5 28.5 50.5 58 58-29.5 7.5-50.5 28.5-58 58-7.5-29.5-28.5-50.5-58-58 29.5-7.5 50.5-28.5 58-58Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+<path d="M160 168c0-22 18-40 40-40h152c22 0 40 18 40 40v10c0 14-8 27-21 34l-151 78c-28 14-60-6-60-37v-7c0-15 8-29 22-36l110-56H200c-22 0-40-18-40-40v-6Z" fill="#ffffff"/>
+<path d="M352 344c0 22-18 40-40 40H160c-22 0-40-18-40-40v-10c0-14 8-27 21-34l151-78c28-14 60 6 60 37v7c0 15-8 29-22 36l-110 56h92c22 0 40 18 40 40v6Z" fill="#ffffff"/>
 </svg>

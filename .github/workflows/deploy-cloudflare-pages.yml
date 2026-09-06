@@ -55,6 +55,9 @@ jobs:
       - name: Install dependencies (lockfile)
         run: pnpm install --frozen-lockfile
 
+      - name: Regenerate STASH PWA branding assets
+        run: pnpm icons:render
+
       - name: Build Cloudflare Pages bundle (root path)
         run: pnpm build:pages
 
@@ -88,8 +91,6 @@ jobs:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # NOTE: do not nest \" inside $( ) — the escaped quotes survive as
-          # literal characters and make [ -n ... ] always true.
           if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
@@ -108,5 +109,5 @@ jobs:
       - name: Deploy skipped note
         if: steps.cf.outputs.configured != 'true'
         run: |
-          echo "::notice::CLOUDFLARE_API_TOKEN secret is not configured — build verified, deploy skipped."
+          echo "::notice::Cloudflare credentials are not configured — build verified, deploy skipped."
           echo "See docs/cloudflare-pages-deploy.md for the one-time setup."
